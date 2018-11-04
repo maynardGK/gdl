@@ -330,14 +330,14 @@ before_build:
   - ps: cd  C:\projects\gdl
 build_script:
   - ps: |
-      if ( "x"$env:GMNAME -Match "x")
+      if ( "x$env:GMNAME" -Match "x")
       {
       echo "No graphicsmagick build attempted "
       }
       else
       {
       echo " $env:GMNAME: 32-bit Quantum GraphicsMagick "
-        C:\msys64\usr\bin\bash.exe -lc "cd /c/projects/gdl &&.  ./scripts/win32/bld_gm32.msys"
+      C:\msys64\usr\bin\bash.exe -lc "cd /c/projects/gdl &&.  ./scripts/win32/bld_gm32.msys"
       }
   - ps: |
       if ( $env:platform -Match "mingw64630x8664") 
