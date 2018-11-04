@@ -30,7 +30,7 @@ mkdir -p build/gdl/msys
 
 plplot=/c/projects/gdl/mingw/plplot-5.13
 cd /c/projects/gdl/build/gdl/msys 
-
+echo " GRAPHICSMAGICK: do? $doGM DIR? $GMDIR "
 cmake  -G"MSYS Makefiles" /c/projects/gdl \
       -DCMAKE_BUILD_TYPE=%CONFIGURATION% \
       -DCMAKE_CXX_FLAGS_RELEASE="-O3 -DNDEBUG" \
@@ -46,8 +46,8 @@ cmake  -G"MSYS Makefiles" /c/projects/gdl \
 
 echo "CONTINUE FROM CMAKE"
 
-make -j4
-make install > gdlinstall.out
+#make -j4
+#make install > gdlinstall.out
 rm src/CMakeFiles/gdl.dir/*.obj
 export PATH=$plplot/bin:$WXROOT/bin:$PATH
 export PLPLOT_DRV_DIR=$plplot/lib/plplot5.13/drivers

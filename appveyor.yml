@@ -130,7 +130,7 @@ install:
        $env:LIB_DIR="\c\projects\gdl\win32libs\$env:WXNAME\lib\gcc_dll" 
        }
   #
-  #- cmd /K ..\scripts\appveyor_plplot.bat This leaves wxWidgets driver behind !!  - ps: |
+  #- cmd /K /E:ON ..\scripts\appveyor_plplot.bat This leaves wxWidgets driver behind !!  - ps: |
   - ps: |
       if ($true)
       {
@@ -343,7 +343,7 @@ build_script:
       if ( $env:platform -Match "mingw64630x8664") 
       {
       cd c:\projects\gdl
-      cmd /K scripts\mingw-bldgdl
+      cmd /E:ON /K scripts\mingw-bldgdl
       }
       else
       {
