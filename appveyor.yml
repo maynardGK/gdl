@@ -80,7 +80,7 @@ install:
         $env:WXROOT="C:\projects\gdl\mingw\$env:WXNAME"
       }
   - ps: |
-      if ($false)  # MINGW mode build wxWidgets 3.0.4
+      if ($env:platform -Match "mingw64630x8664")  # MINGW mode build wxWidgets 3.0.4
       {
         # wxWidgets
         $env:WX_TOP="c:\projects\gdl\win32libs\wxWidgets-3.0.4"
@@ -123,6 +123,12 @@ install:
         # Yet still, the plplot test does not work 'cause wxwidgets.dll is not loaded.
         # Same situation occurs when msys is used to compile.
         }
+       else #
+       {
+       C:\msys64\usr\bin\bash.exe -lc "cd /c/projects/gdl && . scripts/convert_wx.msys"
+       $env:WX_TOP="C:\projects\gdl\win32libs\$env:WXNAME"
+       $env:LIB_DIR="\c\projects\gdl\win32libs\$env:WXNAME\lib\gcc_dll" 
+       }
   #
   #- cmd /K ..\scripts\appveyor_plplot.bat This leaves wxWidgets driver behind !!  - ps: |
   - ps: |
@@ -142,6 +148,7 @@ install:
   - ps: |
       if ($true)
       {
+        cd c:/projects/gdl/win32libs/bsd-xdr-1.0.0
         mv mingw/libxdr.dll.a c:/projects/gdl/mingw/$env:mname/lib
         mv rpc c:/projects/gdl/mingw/$env:mname/include
         mv mingw/mgwxdr-0.dll c:/projects/gdl/mingw/$env:mname/bin
@@ -322,9 +329,26 @@ before_build:
   - ps: Set-Content -Path "Makefile.am" -Value (get-content -Path "Makefile.am" | Select-String -Pattern 'test_tiff.pro' -NotMatch)
   - ps: cd  C:\projects\gdl
 build_script:
-  #- C:\msys64\usr\bin\bash.exe -lc "cd /c/projects/gdl &&.  ./scripts/win32/bld_gm32.msys"
-  - C:\msys64\usr\bin\bash.exe -lc "cd /c/projects/gdl &&. ./scripts/appveyor_gdl.msys"
-  #- cmd /K scripts\mingw-bldgdl
+  - ps: |
+      if ( "x"$env:GMNAME -Match "x")
+      {
+      echo "No graphicsmagick build attempted "
+      }
+      else
+      {
+      echo " $env:GMNAME: 32-bit Quantum GraphicsMagick "
+        C:\msys64\usr\bin\bash.exe -lc "cd /c/projects/gdl &&.  ./scripts/win32/bld_gm32.msys"
+      }
+  - ps: |
+      if ( $env:platform -Match "mingw64630x8664") 
+      {
+      cd c:\projects\gdl
+      cmd /K scripts\mingw-bldgdl
+      }
+      else
+      {
+      C:\msys64\usr\bin\bash.exe -lc "cd /c/projects/gdl &&. ./scripts/appveyor_gdl.msys"
+      }
 
 on_failure:
   - ps: cat c:\projects\gdl\build\testsuite\Testing\Temporary\LastTest.log
@@ -358,7 +382,7 @@ after_build:
   - cd c:\projects\gdl
   - ps: copy scripts/rungdl.bat c:/projects/gdl/install/rungdl.bat
   - ps: copy -r src/pro install/gdl/gdllib
-  - 7z a gdl_build.zip install build mingw
+  - 7z a gdl_build.zip install build mingw win32libs
 
 
 artifacts:

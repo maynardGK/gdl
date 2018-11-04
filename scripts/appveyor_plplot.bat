@@ -5,7 +5,7 @@ cd C:\projects\gdl\win32libs
           -DENABLE_cxx=ON -DOLD_WXWIDGETS=ON  -DENABLE_wxwidgets:BOOL=ON ^
           -DWITH_FREETYPE=OFF -DPLD_wxwidgets=ON -DPLD_pdf=OFF -DPLD_psttf=OFF -DPLD_wingdi=ON ^
           -DCMAKE_INSTALL_PREFIX=C:\projects\gdl\mingw\plplot-5.13 -DOLD_WXWIDGETS=ON ^
-          -DENABLE_wxwidgets=ON -DwxWidgets_LIB_DIR=$env:WX_TOP\lib\gcc_dll 
+          -DENABLE_wxwidgets=ON -DwxWidgets_LIB_DIR=%WX_TOP%\lib\gcc_dll 
 
         cd plplot-5.13.0\build
         mingw32-make 

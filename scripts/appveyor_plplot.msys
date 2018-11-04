@@ -55,6 +55,7 @@ if [[ -d "$WXNAME" ]] ; then
     #   trim out the dll collection
     for f in aui gl html propgrid qa ribbon richtext stc webview xrc ; do
        rm ./${WXNAME}/bin/*$f*.dll
+       rm ./${WXNAME}/lib/*$f-3.0*
        done
     fi
 WXROOT=/c/projects/gdl/mingw/$WXNAME

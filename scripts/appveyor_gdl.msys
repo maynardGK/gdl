@@ -15,13 +15,15 @@ export PATH=/c/projects/gdl/mingw/$mname/bin:$PATH
 # any hints on how to switch compilers, insert here.
 #
 echo "MSYSTEM=$MSYSTEM && . /etc/profile: now ready to compile for $mname:"
-echo $PATH
-echo $LOCALM32
 echo " appveyor_gdl.msys: build gdl with msys script"
 LOCALM32=/c/projects/gdl/mingw/$mname
-#LIB_DIR=/c/projects/gdl/win32libs/wxWidgets-3.0.4/lib/gcc_dll
-echo "LOCALM32=c:/projects/gdl/mingw/$mname occupied by wxWidgets alone (for now)"
 #
+if [ "x${GMNAME}" = "x" ] ; then
+    doGM=OFF
+    else
+    doGM=ON
+    GMDIR="/c/projects/gdl/mingw/"$GMNAME
+    fi
 
 cd /c/projects/gdl
 mkdir -p build/gdl/msys
@@ -35,7 +37,8 @@ cmake  -G"MSYS Makefiles" /c/projects/gdl \
       -DWXWIDGETS=ON -DwxWidgets_USE_PREFIX=$WXROOT \
       -DPLPLOTDIR=$plplot \
       -DCMAKE_INSTALL_PREFIX:PATH=/c/projects/gdl/install/gdl \
-      -DGRAPHICSMAGICK=OFF -DMAGICK=OFF \
+      -DGRAPHICSMAGICK=$doGM -DMAGICK=$doGM \
+      -DGRAPHICSMAGICKDIR=$GMDIR \
       -DPSLIB=OFF -DNETCDF=OFF -DHDF=OFF -DHDF5=OFF \
       -DTIFF=OFF -DGEOTIFF=OFF -DLIBPROJ4=OFF \
       -DFFTW=ON -DGSHHS=OFF -DPYTHON=OFF \

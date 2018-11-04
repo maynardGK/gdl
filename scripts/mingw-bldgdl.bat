@@ -21,21 +21,21 @@ rem which I thought would trump things found in the %PATH%, but that is not so n
 set PATH=C:\projects\gdl\mingw\%MNAME%\bin;%PATH%
 
 rem cmake-12 is issuing a warning about the use of <package>_ROOT logicals.
- set WXWIDGETS_ROOT=C:\projects\gdl\win32libs\wxwidgets-3.0.4
- 
+set wxWidgets_ROOT_DIR=C:\projects\gdl\win32libs\%WXNAME%
+set WX_TOP=%wxWidgets_ROOT_DIR% 
  set PLPLOTDIR=C:\projects\gdl\mingw\plplot-5.13
  cd c:\projects\gdl\build
 echo %PATH%
 cmake --version
 cmake  c:\projects\gdl -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=%CONFIGURATION% ^
       -DCMAKE_CXX_FLAGS_RELEASE="-O3 -DNDEBUG" ^
-      -DWXWIDGETS=OFF -DWXWIDGETSDIR=%WXWIDGETS_ROOT% ^
+      -DWXWIDGETS=ON -DWXWIDGETSDIR=%WX_TOP% ^
       -DPLPLOTDIR=%PLPLOTDIR% ^
       -DCMAKE_INSTALL_PREFIX:PATH=c:\projects\gdl\install\gdl ^
       -DCMAKE_SYSTEM_PREFIX_PATH=%LOCALM32% ^
       -DGRAPHICSMAGICK=ON -DMAGICK=ON -DGRAPHICSMAGICKDIR=%GMDIR% ^
       -DPSLIB=OFF -DNETCDF=OFF -DHDF=OFF -DHDF5=OFF ^
-      -DTIFF=ON -DGEOTIFF=OFF -DLIBPROJ4=ON ^
+      -DTIFF=ON -DGEOTIFF=OFF -DLIBPROJ4=OFF ^
       -DFFTW=ON -DGSHHS=OFF -DPYTHON=OFF ^
       -DUSE_WINGDI_NOT_WINGCC=ON
  cd c:\projects\gdl
