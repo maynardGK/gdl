@@ -46,7 +46,7 @@ cmake  -G"MSYS Makefiles" /c/projects/gdl \
 
 echo "CONTINUE FROM CMAKE"
 
-make -j4 > make.out
+make -j4
 make install > gdlinstall.out
 rm src/CMakeFiles/gdl.dir/*.obj
 export PATH=$plplot/bin:$WXROOT/bin:$PATH
