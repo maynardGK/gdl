@@ -8,6 +8,7 @@ if [ -n "$MSYSTEM" ] ; then
     fi
   fi
 echo "bld_gm32: Architecture =  ${arch}"
+export PATH=/c/Windows/system32:/c/Windows:/c/Windows/System32/Wbem
 export -n CC CXX
 . /etc/profile
 # this is needed to find bin/wx-config
@@ -30,11 +31,12 @@ echo $LOCALM32
 echo " bld_gm32.msys:  with msys script"
 # configure: error: in `/c/projects/gdl/win32libs/GraphicsMagick-1.3.30/bldmingw32':
 # configure: error: libltdl is required by modules build
+export -n CC CXX
 export PATH=$LOCALM32:$PATH
 export LDFLAGS="-L${LOCALM32}/lib"
-export CPPFLAGS="I${LOCALM32}/include"
+export CPPFLAGS="-I${LOCALM32}/include"
 echo "CC = $CC CXX = $CXX"
-echo "LDFLAGS = $LDFLAGS" "CPPFLAGS = $CPPFLAGS \n"
+echo "LDFLAGS = $LDFLAGS" "CPPFLAGS = $CPPFLAGS "
 echo " PATH :  $PATH"
 g++ -v
 GMname=GraphicsMagick-1.3.30
