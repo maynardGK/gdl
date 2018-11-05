@@ -320,7 +320,7 @@ build_script:
       else
       {
       echo " $env:GMNAME: 32-bit Quantum GraphicsMagick "
-      C:\msys64\usr\bin\bash.exe -lc "cd /c/projects/gdl && ./scripts/win32/bld_gm32.msys"
+      cmd /c C:\msys64\usr\bin\bash.exe -lc "cd /c/projects/gdl && ./scripts/win32/bld_gm32.msys" 2>$null
       }
   - ps: |
       if ( $env:platform -Match "mingw64630x8664") 
