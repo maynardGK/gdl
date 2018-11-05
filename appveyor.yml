@@ -66,7 +66,7 @@ install:
       {
         # scripts/XXX.msys make gdl/mingw/mingw32 and load it.
         cd c:/projects/gdl
-        # $env:GMNAME="GraphicsMagick-1.3.30"
+        $env:GMNAME="GraphicsMagick-1.3.30"
         $env:WXNAME="wxWidgets-3.0.2-17"
         c:/msys64/usr/bin/bash.exe -lc 'cd $OLDPWD &&. ./scripts/appveyor_1.msys'
         cd c:/projects/gdl/mingw
@@ -138,22 +138,11 @@ install:
         cd c:/projects/gdl/win32libs
         appveyor DownloadFile `
           https://storage.googleapis.com/google-code-archive-downloads/v2/code.google.com/bsd-xdr/bsd-xdr-1.0.0.tar.gz
-        tar zxf bsd-xdr-1.0.0.tar.gz
-        cd bsd-xdr-1.0.0
-        sed -e 's/-Wall/-Wall -Wno-pointer-to-int-cast #/' -i Makefile
-        sed -i 's/%hh/%/g' src/test/test_data.c
+        C:\msys64\usr\bin\bash.exe -lc "cd /c/projects/gdl &&. scripts/appveyor_bsdxdr.msys"
       }
-  #        mingw32-make -f Makefile -j4 PLATFORM=mingw STAMP=clean TEST_PROGS="" top_srcdir="c:\projects\gdl\win32libs\bsd-xdr-1.0.0" recursive-all >  $env:BLDDIR/makexdr.out
-  - C:\msys64\usr\bin\bash.exe -lc "oldpwd=$OLDPWD &&. /etc/profile && cd $oldpwd && make"
+
   - ps: |
-      if ($true)
-      {
-        cd c:/projects/gdl/win32libs/bsd-xdr-1.0.0
-        mv mingw/libxdr.dll.a c:/projects/gdl/mingw/$env:mname/lib
-        mv rpc c:/projects/gdl/mingw/$env:mname/include
-        mv mingw/mgwxdr-0.dll c:/projects/gdl/mingw/$env:mname/bin
-       }
-      else  # MINGW mode
+      if ($false) # MINGW mode
       { 
         # GNUWin32 (GNU Readline, Zlib, libPNG, PCRE, libtiff)
         # TODO: Find appropriate libtiff with TIFFField, TIFFFieldWithTag and TIFFFieldName (and libgeotiff?)
@@ -205,7 +194,6 @@ install:
         # GSL
         c:\msys64\usr\bin\bash.exe -lc 'cd /c/projects/gdl/win32libs && . /c/projects/gdl/scripts/appveyor_gsl.msys'
         }
-  # - if %platform%==mingw64630x8664 set PATH=C:\mingw-w64\x86_64-6.3.0-posix-seh-rt_v5-rev1\mingw32\bin;%PATH%
 
 before_build:
   # disabling tests that failed from the get-go on Windows (temporarily!)
@@ -330,7 +318,7 @@ before_build:
   - ps: cd  C:\projects\gdl
 build_script:
   - ps: |
-      if ( "x$env:GMNAME" -Match "x")
+      if ( "x$env:GMNAME" -eq "x")
       {
       echo "No graphicsmagick build attempted "
       }
@@ -342,6 +330,8 @@ build_script:
   - ps: |
       if ( $env:platform -Match "mingw64630x8664") 
       {
+      $env:WXNAME=""
+      $env:GMNAME=""
       cd c:\projects\gdl
       cmd /E:ON /K scripts\mingw-bldgdl
       }
