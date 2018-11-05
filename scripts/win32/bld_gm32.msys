@@ -8,7 +8,7 @@ if [ -n "$MSYSTEM" ] ; then
     fi
   fi
 echo "bld_gm32: Architecture =  ${arch}"
-gccin=$GCC
+export -n CC CXX
 . /etc/profile
 # this is needed to find bin/wx-config
 #
@@ -28,8 +28,6 @@ echo "MSYSTEM=$MSYSTEM && . /etc/profile: now ready to compile for mingw:"
 echo ' $PATH  after . /etc/profile :' $PATH
 echo $LOCALM32
 echo " bld_gm32.msys:  with msys script"
-#export CC=/c/mingw-w64/$gccin/mname/bin/gcc && export CXX=/c/mingw-w64/$gccin/mname/bin/g++
-#export PATH=/c/mingw-w64/$gccin/$env:mname/bin:$LOCALM32/bin:$PATH
 # configure: error: in `/c/projects/gdl/win32libs/GraphicsMagick-1.3.30/bldmingw32':
 # configure: error: libltdl is required by modules build
 export PATH=$LOCALM32:$PATH
