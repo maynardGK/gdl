@@ -8,25 +8,26 @@ if [ -n "$MSYSTEM" ] ; then
     fi
   fi
 echo "bld_gm32: Architecture =  ${arch}"
-echo ' $PATH  on entry:' $PATH
-export PATH=/c/Windows:/c/Windows/system32:/c/Windows/system32/Wbem
+gccin=$GCC
 . /etc/profile
 # this is needed to find bin/wx-config
 #
-# any hints on how to switch compilers, insert here.
-#
+echo "LDFLAGS = $LDFLAGS"
+echo "CPPFLAGS = $CPPFLAGS"
+
 echo "MSYSTEM=$MSYSTEM && . /etc/profile: now ready to compile for mingw:"
 echo ' $PATH  after . /etc/profile :' $PATH
 echo $LOCALM32
 echo " bld_gm32.msys:  with msys script"
-
-export PATH=$LOCALM32/bin:$PATH
+export CC=/c/mingw-w64/$gccin/mname/bin/gcc
+export CXX=/c/mingw-w64/$gccin/mname/bin/g++
+export PATH=/c/mingw-w64/$gccin/$env:mname/bin:$LOCALM32/bin:$PATH
 g++ -v
 GMname=GraphicsMagick-1.3.30
 cd $topdir/win32libs
 curl -O -s https://cytranet.dl.sourceforge.net/project/graphicsmagick/graphicsmagick/1.3.30/GraphicsMagick-1.3.30.tar.xz
-export LDFLAGS="-L/c/mingw-w64/${GCC}/$mname/${arch}-w64-mingw32/lib -L${LOCALM32}/lib"
-export CPPFLAGS="-I/c/mingw-w64/${GCC}/$mname/${arch}-w64-mingw32/include -I${LOCALM32}/include"
+export LDFLAGS="-L/c/mingw-w64/$gccin/$mname/${arch}-w64-mingw32/lib -L${LOCALM32}/lib"
+export CPPFLAGS="-I/c/mingw-w64/$gccin/$mname/${arch}-w64-mingw32/include -I${LOCALM32}/include"
 if [[ -f ${GMname}.tar.xz ]] ; then
     tar xf ${GMname}.tar.xz
     mkdir -p $topdir/build/${GMname}
