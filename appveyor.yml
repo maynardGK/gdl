@@ -9,8 +9,8 @@ configuration:
 environment:
   matrix:
   #- platform: mingw64720x8664
-  - platform: mingw64630x8664
   - platform: mingw64630i686
+  - platform: mingw64630x8664
   #- platform: mingw64730x8664
   #- platform: mingw64630x8664
    
@@ -131,15 +131,11 @@ install:
        }
   #
   #- cmd /K /E:ON ..\scripts\appveyor_plplot.bat This leaves wxWidgets driver behind !!  - ps: |
-  - ps: |
-      if ($true)
-      {
-        # BSD-XDR
-        cd c:/projects/gdl/win32libs
-        appveyor DownloadFile `
+  # BSD-XDR
+  - ps: cd c:\projects\gdl\win32libs
+  - ps: appveyor DownloadFile `
           https://storage.googleapis.com/google-code-archive-downloads/v2/code.google.com/bsd-xdr/bsd-xdr-1.0.0.tar.gz
-        C:\msys64\usr\bin\bash.exe -lc "cd /c/projects/gdl &&. scripts/appveyor_bsdxdr.msys"
-      }
+  - ps: C:\msys64\usr\bin\bash.exe -lc "cd /c/projects/gdl &&. scripts/appveyor_bsdxdr.msys" -ErrorAction silentlycontinue
 
   - ps: |
       if ($false) # MINGW mode
