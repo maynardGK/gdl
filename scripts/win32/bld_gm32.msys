@@ -1,4 +1,4 @@
-#!bin/bash.exe
+#!/usr/bin/bash.exe
 #
 topdir=`pwd`
 arch="i686"
@@ -14,23 +14,32 @@ gccin=$GCC
 #
 echo "LDFLAGS = $LDFLAGS" "CPPFLAGS = $CPPFLAGS"
 
+function errorhandler ()  { 
+      echo "Unexpected error: $1 - $2"
+       exit 1
+        }
+
+# try-start - capture errors
+trap "errorhandler $LINENO $BASH_COMMAND" ERR
+
 echo "MSYSTEM=$MSYSTEM && . /etc/profile: now ready to compile for mingw:"
 echo ' $PATH  after . /etc/profile :' $PATH
 echo $LOCALM32
 echo " bld_gm32.msys:  with msys script"
-export CC=/c/mingw-w64/$gccin/mname/bin/gcc && export CXX=/c/mingw-w64/$gccin/mname/bin/g++
-export LDFLAGS="-L/c/mingw-w64/$gccin/$mname/${arch}-w64-mingw32/lib -L${LOCALM32}/lib"
-export CPPFLAGS="-I/c/mingw-w64/$gccin/$mname/${arch}-w64-mingw32/include -I${LOCALM32}/include"
+#export CC=/c/mingw-w64/$gccin/mname/bin/gcc && export CXX=/c/mingw-w64/$gccin/mname/bin/g++
+#export LDFLAGS="-L/c/mingw-w64/$gccin/$mname/${arch}-w64-mingw32/lib -L${LOCALM32}/lib"
+#export CPPFLAGS="-I/c/mingw-w64/$gccin/$mname/${arch}-w64-mingw32/include -I${LOCALM32}/include"
 #export PATH=/c/mingw-w64/$gccin/$env:mname/bin:$LOCALM32/bin:$PATH
 export PATH=/c/projects/mingw$PATH
 echo "CC = $CC CXX = $CXX"
 echo "LDFLAGS = $LDFLAGS" "CPPFLAGS = $CPPFLAGS \n"
-echo ' $PATH :' $PATH
+echo " PATH :  $PATH"
 g++ -v
 GMname=GraphicsMagick-1.3.30
 cd $topdir/win32libs
 curl -O -s https://cytranet.dl.sourceforge.net/project/graphicsmagick/graphicsmagick/1.3.30/GraphicsMagick-1.3.30.tar.xz
-if [[ -f ${GMname}.tar.xz ]] ; then
+if [ -f ${GMname}.tar.xz ]; then
+  echo " $GMname if here "
     tar xf ${GMname}.tar.xz
     mkdir -p $topdir/build/${GMname}
     bldout=$topdir/build/${GMname}
@@ -51,3 +60,6 @@ if [[ -f ${GMname}.tar.xz ]] ; then
   echo " no ${GMname}.tar.xz present to build "
 fi
 cd $topdir
+# try-end - stop capturing errors
+trap - ERR
+exit 0 
