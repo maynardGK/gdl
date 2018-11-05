@@ -135,7 +135,7 @@ install:
   - ps: cd c:\projects\gdl\win32libs
   - ps: appveyor DownloadFile `
           https://storage.googleapis.com/google-code-archive-downloads/v2/code.google.com/bsd-xdr/bsd-xdr-1.0.0.tar.gz
-  - ps: C:\msys64\usr\bin\bash.exe -lc "cd /c/projects/gdl &&. scripts/appveyor_bsdxdr.msys" -ErrorAction silentlycontinue
+  - C:\msys64\usr\bin\bash.exe -lc "cd /c/projects/gdl &&. scripts/appveyor_bsdxdr.msys"
 
   - ps: |
       if ($false) # MINGW mode

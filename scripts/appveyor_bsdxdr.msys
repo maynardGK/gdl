@@ -18,7 +18,6 @@ if [[ -n "$MSYSTEM" ]] ; then
 cd /c/projects/gdl/win32libs/bsd-xdr-1.0.0
 make
 mv mingw/libxdr.dll.a c:/projects/gdl/mingw/$mname/lib
-rm -r c:/projects/gdl/mingw/$mname/include/rpc
 mv rpc c:/projects/gdl/mingw/$mname/include
 echo " bsd-xdr installed for GDL"
 mv mingw/mgwxdr-0.dll c:/projects/gdl/mingw/$mname/bin
