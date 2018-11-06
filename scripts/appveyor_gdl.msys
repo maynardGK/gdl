@@ -69,5 +69,5 @@ export PLPLOT_LIB=$plplot/share/plplot5.13.0
 if [ -d $GMDIR ] ; then
   cp -pr $GMDIR/bin/*.dll $LOCALM32/bin
   fi
-#make check
+make check
 
