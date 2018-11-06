@@ -48,7 +48,6 @@ if [[ -d "$WXNAME" ]] ; then
     cd temp
     tar xf ../mingw-w64-${arch}-${WXNAME}-any.pkg.tar.xz
     sed -e "s;-Wl,--subsystem,windows -mwindows;;" -i ./$mname/bin/wx-config
-    sed -e "s;-fpermissive;-fpermissive -Wno-attributes;" -i ./$mname/bin/wx-config
     cd $mname 
     patch -p4 -i /c/projects/gdl/scripts/patch/wxWidgets-3.0.2.patch    
     cd ../..

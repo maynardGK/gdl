@@ -57,7 +57,9 @@ cmake  -G"MSYS Makefiles" /c/projects/gdl \
       -DUSE_WINGDI_NOT_WINGCC=ON | tee cmake.out
 
 echo "CONTINUE FROM CMAKE"
-
+if [ $DOWX = ":BOOL=ON" ]; then
+  sed -e "s;-D__WXMSW__;-D__WXMSW__ -Wno-attributes;" -i ./src/CMakeFiles/gdl.dir/flags.make
+  fi
 make -j4
 make install > gdlinstall.out
 rm src/CMakeFiles/gdl.dir/*.obj
