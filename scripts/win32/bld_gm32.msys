@@ -8,8 +8,17 @@ if [ -n "$MSYSTEM" ] ; then
     fi
   fi
 echo "bld_gm32: Architecture =  ${arch}"
-export PATH=/c/Windows/system32:/c/Windows:/c/Windows/System32/Wbem
-export -n CC CXX
+export PATH=$Begin_path
+export -n CC
+export -n  CXX
+echo "bld_gm32: going into MSYS initialization. Cleared CC, CXX, PATH=Begin_path"
+  if [ ! $PATH = $Begin_path ]; then
+     echo " Bash comparison disagrees with PATH=Begin_path"
+     else
+     echo " Looks like we attained PATH=Begin_path"
+     fi
+echo "CC = $CC CXX = $CXX"
+echo $PATH
 . /etc/profile
 # this is needed to find bin/wx-config
 #
@@ -38,7 +47,9 @@ export CPPFLAGS="-I${LOCALM32}/include"
 echo "CC = $CC CXX = $CXX"
 echo "LDFLAGS = $LDFLAGS" "CPPFLAGS = $CPPFLAGS "
 echo " PATH :  $PATH"
-g++ -v
+echo ""
+echo " gcc -v :"
+gcc -v
 GMname=GraphicsMagick-1.3.30
 cd $topdir/win32libs
 curl -O -s https://cytranet.dl.sourceforge.net/project/graphicsmagick/graphicsmagick/1.3.30/GraphicsMagick-1.3.30.tar.xz
@@ -56,7 +67,7 @@ if [ -f ${GMname}.tar.xz ]; then
   --with-modules --with-wmf --with-xml --with-lcms2 --with-jp2 \
   --with-webp --with-gslib --with-jbig --without-fpx --without-dps \
   --without-perl --without-x >& $bldout/configure.out
-  tail $bldout/configure.out &&  echo "That was tail end of configure.out"
+  tail -40 $bldout/configure.out &&  echo "That was tail end of configure.out"
   make -j4 >& $bldout/make.out
   tail $bldout/make.out &&  echo "That was tail end of make.out"
   make install >& $bldout/gminstall.out
