@@ -43,7 +43,7 @@ echo " bld_gm32.msys:  with msys script"
 export -n CC CXX
 export PATH=$LOCALM32:$PATH
 export LDFLAGS="-L${LOCALM32}/lib"
-export CPPFLAGS="-I${LOCALM32}/include"
+export CPPFLAGS="-I${LOCALM32}/include -I${LOCALM32}/mingw32/include/freetype2 -I${LOCALM32}/mingw32/include/libxml"
 echo "CC = $CC CXX = $CXX"
 echo "LDFLAGS = $LDFLAGS" "CPPFLAGS = $CPPFLAGS "
 echo " PATH :  $PATH"
