@@ -313,7 +313,7 @@ before_build:
   - ps: Set-Content -Path "Makefile.am" -Value (get-content -Path "Makefile.am" | Select-String -Pattern 'test_tiff.pro' -NotMatch)
   - ps: cd  C:\projects\gdl
 build_script:
-  - set GMNAME=
+  - ps: $env:GMNAME=""
   # the MSYS script in win32 will build a 32-bit GraphicsMagick distro on a healthy MSYS system
   # but it won't for appveyor.  So, GMNAME="" to quash it and move on, the repo distribution created by
   # appveyor_1.msys will be there for 8-bit images. 
