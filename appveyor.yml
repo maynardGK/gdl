@@ -341,7 +341,7 @@ build_script:
       }
       else
       {
-      C:\msys64\usr\bin\bash.exe -lc "cd /c/projects/gdl &&. ./scripts/appveyor_gdl.msys"
+      C:\msys64\usr\bin\bash.exe -lc "cd /c/projects/gdl &&. ./scripts/appveyor_gdl.msys" 2>$null
       }
 
 on_failure:
