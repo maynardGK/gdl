@@ -313,6 +313,10 @@ before_build:
   - ps: Set-Content -Path "Makefile.am" -Value (get-content -Path "Makefile.am" | Select-String -Pattern 'test_tiff.pro' -NotMatch)
   - ps: cd  C:\projects\gdl
 build_script:
+  - set GMNAME=
+  # the MSYS script in win32 will build a 32-bit GraphicsMagick distro on a healthy MSYS system
+  # but it won't for appveyor.  So, GMNAME="" to quash it and move on, the repo distribution created by
+  # appveyor_1.msys will be there for 8-bit images. 
   - ps: |
       if ( "x$env:GMNAME" -eq "x")
       {
@@ -324,6 +328,9 @@ build_script:
       echo " $env:GMNAME "
       cmd /c C:\msys64\usr\bin\bash.exe -lc "cd /c/projects/gdl && ./scripts/win32/bld_gm32.msys" 2>$null
       }
+  # Given that a GM-Q32 directory will not be present in mingw/, GMNAME can be anything to trigger inclusion
+  # in the appveyor_gdl build: The distribution is created in appveyor_1.msys from the repo.
+  - set GMNAME=GraphicsMagick-1.3.27
   - ps: |
       if ( $env:platform -Match "mingw64630x8664") 
       {
