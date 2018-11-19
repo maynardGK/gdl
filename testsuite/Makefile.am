@@ -88,6 +88,7 @@ TESTS = \
   test_constants.pro \
   test_convert_coord.pro \
   test_correlate.pro \
+  test_delvarrnew.pro \
   test_deriv.pro \
   test_device.pro \
   test_diag_matrix.pro \
@@ -118,13 +119,16 @@ TESTS = \
   test_get_screen_size.pro \
   test_gh00178.pro \
   test_grib.pro \
+  test_hash.pro \
   test_hdf5.pro \
+  test_help.pro \
   test_heap_refcount.pro \
   test_hist_2d.pro \
   test_idl8.pro \
   test_idl_validname.pro \
   test_idlneturl.pro \
   test_image_statistics.pro \
+  test_indgen.pro \
   test_interpol.pro \
   test_interpolate.pro \
   test_isa.pro \
@@ -134,6 +138,7 @@ TESTS = \
   test_la_least_squares.pro \
   test_list.pro \
   test_ludc_lusol.pro \
+  test_make_array.pro \
   test_make_dll.pro \
   test_math_function_dim.pro \
   test_matrix_multiply.pro \
@@ -151,6 +156,8 @@ TESTS = \
   test_null.pro \
   test_obj_isa.pro \
   test_obj_new.pro \
+  test_obj_hasmethod.pro \
+  test_obj_valid.pro \
   test_parse_url.pro \
   test_plot_oo.pro \
   test_plot_ranges.pro \
@@ -162,6 +169,7 @@ TESTS = \
   test_product.pro \
   test_ps_decomposed.pro \
   test_ptrarr.pro \
+  test_ptr_valid.pro \
   test_python.pro \
   test_python_module_0.pro \
   test_python_module_1.pro \
@@ -207,6 +215,7 @@ TESTS = \
   test_where.pro \
   test_window_background.pro \
   test_wordexp.pro \
+  test_wordexp_null_string.pro \
   test_xdr.pro \
   test_zeropoly.pro \
   test_zip.pro \
