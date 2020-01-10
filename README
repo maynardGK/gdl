@@ -93,7 +93,7 @@ python      http://www.python.org
 libproj4    (consult the MAP_INSTALL file)
 UDUNITS-2   http://www.unidata.ucar.edu/software/udunits/
 GRIB API    http://www.ecmwf.int/products/data/software/grib_api.html        
-GSHHS       (consult the MAP_INSTALL file)
+shp         http://shapelib.maptools.org/ (consult the MAP_INSTALL file)
 wxWidgets   http://www.wxwidgets.org/
 pslib       http://pslib.sourceforge.net/
 glpk        https://www.gnu.org/software/glpk/  : only to have the linear programming function SIMPLEX() available.
@@ -132,15 +132,11 @@ LINE EDITING:
   
 GRAPHICS AND DEPENDENCIES:
 --------------------------
-  For the graphics support of GDL, the plplot library version 5.9
-  is necessary. PLplot >= 5.9.9 is recommended, but plplot > 10 is tricky (see below).
-  See below if you have an older version of plplot.
+  For the graphics support of GDL, the plplot library version >5.9.6 is necessary. 
+  PLplot >= 5.9.9 is recommended, but plplot > 10 is tricky (see below).
   To download plplot please look here:
   http://plplot.sourceforge.net/source/index.html
   
-  If you have plplot older than 5.9.6 use the configure
-  option --enable-oldplplot (configure) or -DOLDPLPLOT=on (CMake)
-  With this option, plplot down to 5.9 should work.
   A possible problem was reported:
   On opening more than one window, plplot causes a segmentation fault
   if GDL is compiled with ImageMagick. This happens if plplot uses 
@@ -295,7 +291,7 @@ MAP PROJECTIONS and GEOPHYSICS:
   It is NOT used by default.
   If you want to use it, use --with-libproj4=DIR
 
-  GDL uses GSHHS to implement MAP_CONTINENTS - see MAP_INSTALL (optional)
+  GDL uses libshp (shapelib) to implement MAP_CONTINENTS - see MAP_INSTALL (optional)
 
 PYTHON INTERFACE:
 -----------------

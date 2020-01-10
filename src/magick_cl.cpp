@@ -50,10 +50,7 @@
 #define START_MAGICK  \
     if (notInitialized ) { \
       notInitialized = false; \
-        Magick::InitializeMagick(NULL);  \
-      if ( QuantumDepth < 32) fprintf(stderr, "%% WARNING: your version of the %s library will truncate images to %d bits per pixel\n", \
-              MagickPackageName, QuantumDepth); \
-    }
+        Magick::InitializeMagick(NULL); }
 
 namespace lib {
 
@@ -65,6 +62,10 @@ namespace lib {
   unsigned int gValid[40];
   unsigned int gCount = 0;
   static bool notInitialized = true;
+
+  __attribute__((constructor)) static void init(void) {
+    START_MAGICK;
+  }
 
   void magick_setup() {
     int i;
@@ -191,7 +192,7 @@ namespace lib {
             : 3; // RGB
        */
 
-      // AC 2012-May-10 this is OK (reliable), see exemple "589 Lavandula mono"
+      // AC 2012-May-10 this is OK (reliable), see example "589 Lavandula mono"
       if (a.matte()) channels += 1;
 
       // TODO! multiple images (using the Magick++ STL interface)
@@ -482,7 +483,7 @@ namespace lib {
           if (nParam > 2) e->SetPar(2, G);
           if (nParam > 3) e->SetPar(3, B);
         } else {
-          e->Throw("Uknown Image type, too many colors");
+          e->Throw("Unknown Image type, too many colors");
         }
       } else {
         e->Throw("Not an indexed image: " + e->GetParString(0));

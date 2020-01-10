@@ -36,6 +36,7 @@
 #include "math_fun_gm.hpp"
 #include "math_fun_ng.hpp"
 #include "plotting.hpp"
+#include "sorting.hpp"
 
 #include "file.hpp"
 
@@ -108,10 +109,16 @@ void LibInit()
   new DLibFun(lib::scope_varfetch_value,string("SCOPE_VARFETCH"),-1,scope_varfetchKey,scope_varfetchWarnKey);
   const string scope_tracebackKey[]={"STRUCTURE","SYSTEM", KLISTEND};
   new DLibFunRetNew(lib::scope_traceback,string("SCOPE_TRACEBACK"),0,scope_tracebackKey);
+  const string scope_varnameKey[] = {"COMMON", "COUNT", "LEVEL", KLISTEND};
+  new DLibFun (lib::scope_varname_fun, string ("SCOPE_VARNAME"), -1, scope_varnameKey);
+
 
   const string cpuKey[]={ "RESET","RESTORE","TPOOL_MAX_ELTS", "TPOOL_MIN_ELTS",
 					"TPOOL_NTHREADS","VECTOR_ENABLE",KLISTEND};
-  new DLibPro(lib::cpu,string("CPU"),0,cpuKey);
+  new DLibPro(lib::cpu_pro,string("CPU"),0,cpuKey);
+
+  const string gdlconfigKey[]={"MAP_QUALITY","GDL_NO_DSFMT","GDL_USE_WX",KLISTEND};
+  new DLibPro(lib::gdl_config_pro,string("GDL_CONFIG"),0,gdlconfigKey);
 
   const string get_kbrdKey[]={"ESCAPE","KEY_NAME",KLISTEND};
   new DLibFunRetNew(lib::get_kbrd,string("GET_KBRD"),1,NULL,get_kbrdKey);
@@ -124,6 +131,10 @@ void LibInit()
   const string routine_infoKey[]={"FUNCTIONS","SYSTEM","DISABLED","ENABLED",
 				  "PARAMETERS","SOURCE", KLISTEND};
   new DLibFunRetNew(lib::routine_info,string("ROUTINE_INFO"),1,routine_infoKey);
+
+  new DLibFunRetNew(lib::routine_name_fun,string("ROUTINE_NAME_INTERNALGDL"),1);
+  new DLibFunRetNew(lib::routine_dir_fun,string("ROUTINE_DIR"),1);
+
 
 #ifdef _WIN32
 //Please note that NOWAIT and HIDE are WINDOWS-Reserved Keywords.
@@ -174,8 +185,9 @@ void LibInit()
                                 "TEST_DIRECTORY", "TEST_EXECUTABLE", "TEST_READ",
                                  "TEST_REGULAR", "TEST_WRITE", "TEST_ZERO_LENGTH",
                                  "TEST_SYMLINK",
+                                 "DIRECTORY","SYMLINK","REGULAR","ZERO_LENGTH",
                                  KLISTEND};
-  new DLibFunRetNew(lib::file_search,string("FILE_SEARCH"),2,file_searchKey);
+  new DLibFunRetNew(lib::file_search,string("FILE_SEARCH"),3,file_searchKey);
 
   const string file_expand_pathKey[]={KLISTEND};
   new DLibFunRetNew(lib::file_expand_path,string("FILE_EXPAND_PATH"),1,file_expand_pathKey);
@@ -220,6 +232,25 @@ void LibInit()
   new DLibFunRetNew(lib::file_dirname,string("FILE_DIRNAME"),1,file_dirnameKey);
 
 
+  const string file_moveKey[]={"ALLOW_SAME", "OVERWRITE", "REQUIRE_DIRECTORY", 
+			"VERBOSE", "NOEXPAND_PATH",KLISTEND};
+  new DLibPro(lib::file_move,string("FILE_MOVE"),2,file_moveKey);
+  
+  //exists as stub procedure for _WIN32
+#ifndef _WIN32
+  const string file_linkKey[]={"ALLOW_SAME", "HARDLINK", 
+			"VERBOSE", "NOEXPAND_PATH",KLISTEND};
+  new DLibPro(lib::file_link,string("FILE_LINK"),2,file_linkKey);
+#endif  
+  const string file_copyKey[]={"ALLOW_SAME", "OVERWRITE","FORCE", "REQUIRE_DIRECTORY", 
+			"VERBOSE", "NOEXPAND_PATH","RECURSIVE","COPY_SYMLINK",KLISTEND};
+  new DLibPro(lib::file_copy,string("FILE_COPY"),2,file_copyKey);
+
+  const string file_deleteKey[]={"ALLOW_NONEXISTENT","NOEXPAND_PATH","RECURSIVE",
+			"QUIET","VERBOSE",KLISTEND};
+  new DLibPro(lib::file_delete,string("FILE_DELETE"),-1,file_deleteKey);
+
+
   const string file_sameKey[]={"NOEXPAND_PATH",KLISTEND};
   new DLibFunRetNew(lib::file_same,string("FILE_SAME"),2,file_sameKey);
 
@@ -237,6 +268,8 @@ void LibInit()
 
   const string sortKey[]={"L64",KLISTEND};
   new DLibFunRetNew(lib::sort_fun,string("SORT"),1,sortKey,NULL,true);
+  const string gdlsortKey[]={"L64","QUICK","MERGE","RADIX","INSERT","AUTO",KLISTEND}; //,"CHECK"
+  new DLibFunRetNew(lib::gdl_sort_fun,string("GDL_SORT"),1,gdlsortKey,NULL,true);
 
   const string medianKey[]={"EVEN","DOUBLE","DIMENSION",KLISTEND};
   new DLibFunRetNew(lib::median,string("MEDIAN"),2,medianKey);
@@ -496,13 +529,14 @@ void LibInit()
   // retConstant: check definition of the rounding functions if they depend 
   // from some sys var (defining a round mode) 
   // (probably nobody rounds a constant anyway)
-  new DLibFunRetNew(lib::round_fun,string("ROUND"),1,roundKey);
-  const string ceilfloorKey[]={"L64",KLISTEND};
-  new DLibFunRetNew(lib::ceil_fun,string("CEIL"),1,ceilfloorKey);
-  new DLibFunRetNew(lib::floor_fun,string("FLOOR"),1,ceilfloorKey);
+  const string roundceilfloorKey[]={"L64",KLISTEND};
+  new DLibFunRetNew(lib::round_fun,string("ROUND"),1,roundceilfloorKey);
+  new DLibFunRetNew(lib::ceil_fun,string("CEIL"),1,roundceilfloorKey);
+  new DLibFunRetNew(lib::floor_fun,string("FLOOR"),1,roundceilfloorKey);
 
   new DLibFunDirect(lib::conj_fun,string("CONJ"));
   new DLibFunDirect(lib::imaginary_fun,string("IMAGINARY"));
+  new DLibFunDirect(lib::real_part_fun,string("REAL_PART"));
 
   const string strcompressKey[]={"REMOVE_ALL",KLISTEND};
   new DLibFunRetNew(lib::strcompress,string("STRCOMPRESS"),1,strcompressKey,NULL,true);
@@ -518,7 +552,7 @@ void LibInit()
   new DLibFunRetNew(lib::strpos,string("STRPOS"),3,strposKey,NULL,true,2);
   new DLibPro(lib::strput,string("STRPUT"),3,NULL,NULL,2);
   
-  const string whereKey[]={"COMPLEMENT","NCOMPLEMENT","NULL",KLISTEND};
+  const string whereKey[]={"COMPLEMENT","NCOMPLEMENT","NULL","L64",KLISTEND};
   new DLibFunRetNew(lib::where_fun,string("WHERE"),2,whereKey);
 
   const string totalKey[]={"CUMULATIVE","DOUBLE","NAN","INTEGER","PRESERVE_TYPE",KLISTEND};
@@ -579,14 +613,9 @@ void LibInit()
   const string set_plotKey[]={"COPY","INTERPOLATE",KLISTEND};
   new DLibPro(lib::set_plot,string("SET_PLOT"),1,set_plotKey);
 
-#ifdef HAVE_X  
   const string get_screen_sizeKey[]={"RESOLUTION","DISPLAY_NAME",KLISTEND};
   new DLibFunRetNew(lib::get_screen_size,string("GET_SCREEN_SIZE"),1,get_screen_sizeKey);
-#else
-  const string get_screen_sizeKey[]={"RESOLUTION",KLISTEND};
-  // DisplayName option or parameter only with X11.
-  new DLibFunRetNew(lib::get_screen_size,string("GET_SCREEN_SIZE"),0,get_screen_sizeKey);
-#endif
+
   const string tvlctKey[]={"GET","HLS","HSV",KLISTEND};
   new DLibPro(lib::tvlct,string("TVLCT"),4,tvlctKey);
 

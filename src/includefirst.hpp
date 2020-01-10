@@ -24,12 +24,8 @@
 #endif
 // #undef cerr if you want to try it.
 
-//According the to Windows Dev Center WIN32_LEAN_AND_MEAN excludes APIs such as Cryptography, DDE, RPC, Shell, and Windows Sockets.
-//It speeds the build process  by excluding some of the less frequently used APIs. VC_EXTRALEAN is possibly another option still "leaner"
-#if defined(_WIN32)
+#ifdef WIN32
 #  define WIN32_LEAN_AND_MEAN 1
-#include <windows.h>
-#include <winsock2.h>
 #endif
 
 #ifdef HAVE_CONFIG_H
@@ -41,22 +37,8 @@
 #pragma warning( disable : 4716 )
 #endif
 
-// Python.h must be included before everything else
-#if defined(USE_PYTHON) || defined(PYTHON_MODULE)
-
-#ifndef HAVE_LIBREADLINE
-#define GDL_NOT_HAVE_READLINE
-#endif
-
-#include <Python.h>
-
-#ifdef GDL_NOT_HAVE_READLINE
-#undef HAVE_LIBREADLINE
-#endif
-
-#undef GDL_NOT_HAVE_READLINE
-
-#endif
+#include <cstddef>
+#include <cstdlib>
 
 #if defined(USE_EIGEN)
 #include <Eigen/Core>
@@ -67,6 +49,61 @@
 #  include <sys/regset.h>
 #  undef CS
 #  undef GS
+#endif
+
+//define globally a gdl method for allocating/deallocating/freeing data compatible with alignment needed by EIGEN.
+//This permits to create unallocated data variable (BaseGDL* objects) and have them point to some
+// data adress that has been allocated in a c or c++ function.
+//NOTE THIS RELIES ON EIGEN today so its not aligned without EIGEN. ~/nbut we could use C11 aligned_alloc 
+inline void* gdlAlignedMalloc(std::size_t size) {
+#if defined(USE_EIGEN)
+ return Eigen::internal::aligned_malloc(size);
+#else
+ return std::malloc(size);
+#endif
+}
+
+inline void* gdlAlignedRealloc(void *ptr, std::size_t new_size, std::size_t old_size=0) { //apparently Eigen does not use old_size anymore. Pfewh.
+#if defined(USE_EIGEN)
+ return Eigen::internal::aligned_realloc(ptr,new_size,old_size);
+#else
+ return std::realloc(ptr, new_size);
+#endif
+}
+
+inline void gdlAlignedFree(void* ptr) {
+#if defined(USE_EIGEN)
+ return Eigen::internal::aligned_free(ptr);
+#else
+ return free(ptr);
+#endif
+}
+
+
+#ifdef _OPENMP
+#include <omp.h>
+
+inline int currentNumberOfThreads() {
+  return omp_get_num_threads();
+}
+inline int maxNumberOfThreads() {
+  return omp_get_num_procs();
+}
+inline int currentThreadNumber() {
+return omp_get_thread_num();
+}
+#else
+inline int currentNumberOfThreads() {
+  return 1;
+}
+
+inline int maxNumberOfThreads() {
+  return 1;
+}
+
+inline int currentThreadNumber() {
+return 0;
+}
 #endif
 
 #endif

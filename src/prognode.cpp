@@ -381,10 +381,9 @@ BaseGDL* ARRAYDEF_GENERALIZED_INDGENNode::Eval()
 {
   // GDLInterpreter::
   DType cType = GDL_UNDEF; // conversion type
-  SizeT maxRank = 0;
   BaseGDL* cTypeData;
   BaseGDL * val[3];
-  DDouble off, endval, inc;
+  DDouble off, inc;
   DLong64 sz; //must be signed fo further tests
   int i = 0;
 
@@ -436,8 +435,9 @@ BaseGDL* ARRAYDEF_GENERALIZED_INDGENNode::Eval()
     i++;
   }
   _t = this->getNextSibling();
-  if (i != 3) return NullGDL::GetSingleInstance();
-
+  if (i > 3 || i < 2) return NullGDL::GetSingleInstance();
+  // will handle [9:1] or [1:9]
+  bool autoInc = (i == 2);  
   //compute n using type arith, not doubles, even if off & inc will be passed as doubles:
   // behaviour could be simpler and *safer* if we created a specialized template like in:
   // "new DxxxGDL(dim, BaseGDL::SELF_INDGEN, off, inc);"
@@ -446,9 +446,13 @@ BaseGDL* ARRAYDEF_GENERALIZED_INDGENNode::Eval()
   case GDL_FLOAT:
   {
     DFloat    f_off = (*(static_cast<DFloatGDL*> (val[0]->Convert2(GDL_FLOAT))))[0]; off=f_off;
-    DFloat    f_inc = (*(static_cast<DFloatGDL*> (val[2]->Convert2(GDL_FLOAT))))[0]; inc=f_inc;
-    if (f_inc == 0) throw GDLException("Array creation stride must not be 0."); //test must be done here...
     DFloat f_endval = (*(static_cast<DFloatGDL*> (val[1]->Convert2(GDL_FLOAT))))[0];
+    DFloat f_inc;
+    if (autoInc) {
+      f_inc = (f_endval > f_off)?1.0:-1.0;
+    } else f_inc = (*(static_cast<DFloatGDL*> (val[2]->Convert2(GDL_FLOAT))))[0];
+    inc=f_inc;
+    if (f_inc == 0) throw GDLException("Array creation stride must not be 0."); //test must be done here...
     DFloat n_f = (f_endval - f_off) / f_inc +1.0;
     sz = n_f;
   }
@@ -458,9 +462,13 @@ BaseGDL* ARRAYDEF_GENERALIZED_INDGENNode::Eval()
   case GDL_STRING:
   {
     DDouble    d_off = (*(static_cast<DDoubleGDL*> (val[0]->Convert2(GDL_DOUBLE))))[0]; off=d_off;
-    DDouble    d_inc = (*(static_cast<DDoubleGDL*> (val[2]->Convert2(GDL_DOUBLE))))[0]; inc=d_inc;
-    if (d_inc == 0) throw GDLException("Array creation stride must not be 0.");
     DDouble d_endval = (*(static_cast<DDoubleGDL*> (val[1]->Convert2(GDL_DOUBLE))))[0];
+    DDouble d_inc;
+    if (autoInc) {
+      d_inc = (d_endval > d_off)?1.0:-1.0;
+    } else d_inc = (*(static_cast<DDoubleGDL*> (val[2]->Convert2(GDL_DOUBLE))))[0];
+    inc=d_inc;
+    if (d_inc == 0) throw GDLException("Array creation stride must not be 0.");
     DFloat n_d = (d_endval - d_off) / d_inc +1.0;
     sz = n_d;
   }
@@ -468,9 +476,13 @@ BaseGDL* ARRAYDEF_GENERALIZED_INDGENNode::Eval()
   default:
   {
     DLong64    i_off = (*(static_cast<DLong64GDL*> (val[0]->Convert2(GDL_LONG64))))[0]; off=i_off;
-    DLong64    i_inc = (*(static_cast<DLong64GDL*> (val[2]->Convert2(GDL_LONG64))))[0]; inc=i_inc;
-    if (i_inc == 0) throw GDLException("Array creation stride must not be 0.");
     DLong64 i_endval = (*(static_cast<DLong64GDL*> (val[1]->Convert2(GDL_LONG64))))[0];
+    DLong64    i_inc;
+    if (autoInc) {
+      i_inc = (i_endval > i_off)?1:-1;
+    } else i_inc = (*(static_cast<DLong64GDL*> (val[2]->Convert2(GDL_LONG64))))[0];
+    inc=i_inc; 
+    if (i_inc == 0) throw GDLException("Array creation stride must not be 0.");
     sz = (i_endval - i_off) / i_inc +1;
   }
     break;
@@ -1172,23 +1184,11 @@ RetCode  PCALLNode::Run()
   _t = _t->getNextSibling();
 			
   ProgNode::interpreter->SetProIx( p);
-#ifdef 	AUTO_PRINT_EXPR
-#ifndef GDL_DEBUG 
-  if (p->proIx == -1) {
-    try {
-          ProgNode::interpreter->executeLine.clear(); // clear EOF (for executeLine)
-          ProgNode::interpreter->executeLine.str( "print,/implied_print," + ProgNode::interpreter->executeLine.str()); 
-          std::istream execute_me(ProgNode::interpreter->executeLine.rdbuf());
-          ProgNode::interpreter->ExecuteLine(&execute_me, 0);
-          ProgNode::interpreter->SetRetTree( this->getNextSibling());
-          return RC_OK;
-        } catch( GDLException& e)
-		{
-			throw e;
-		}
+  
+  if( p->proIx == -1)  {
+    ProgNode::interpreter->SetRetTree( this->getNextSibling());
+    return RC_OK; //still -1 ? means the "print..." catch was ok, and the command was processed. Otherwise we would have been thrown.
   }
-#endif
-#endif  
   EnvUDT* newEnv = new EnvUDT( p, proList[p->proIx]);
 			
   ProgNode::interpreter->parameter_def(_t, newEnv);

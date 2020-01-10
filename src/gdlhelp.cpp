@@ -42,7 +42,7 @@
 #endif
 
 
-#ifndef _WIN32
+#ifndef _MSC_VER
 #	include <dirent.h>
 #else
 // MSC workaround implementation in file.cpp
@@ -111,6 +111,7 @@ extern "C" {
 #include "dpro.hpp"
 
 #include "gdlhelp.hpp"
+#include "nullgdl.hpp"
 
 // for sorting compiled pro/fun lists by name
 struct CompFunName: public std::binary_function< DFun*, DFun*, bool>
@@ -572,7 +573,7 @@ BaseGDL* recall_commands( EnvT* e)
       ostr << "UNDEFINED = <Undefined>" << endl;
       return;
     }
-    if (!par) {
+    if (par==NullGDL::GetSingleInstance()) {
       ostr << "UNDEFINED = !NULL" << endl;
       return;
     }
@@ -719,12 +720,7 @@ void help_help(EnvT* e)
   }
 
   void SortAndPrintStream(ostringstream& oss) {
-#ifdef _WIN32
-// according to doc, this is what std::endl should look like on windows. Not tested.
-    std::string delimiter = "\r\n";
-#else
     std::string delimiter = "\n";
-#endif
     std::string s = oss.rdbuf()->str().erase(oss.rdbuf()->str().length(), 1);
     size_t pos = 0;
     vector<std::string> stringList;
@@ -741,12 +737,8 @@ void help_help(EnvT* e)
 }
   
   DStringGDL* StreamToGDLString(ostringstream& oss, bool sorted=false) {
-#ifdef _WIN32
-// according to doc, this is what std::endl should look like on windows. Not tested.
-    std::string delimiter = "\r\n";
-#else
+
     std::string delimiter = "\n";
-#endif
     int nlines = 0;
     size_t pos = 0;
     while ((pos = oss.str().find(delimiter, pos + 1)) != std::string::npos) {

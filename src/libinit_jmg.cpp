@@ -38,6 +38,7 @@
 #include "gsl_fun.hpp"
 #include "image.hpp"
 #include "plotting.hpp"
+#include "projections.hpp"
 
 #include "widget.hpp"
 
@@ -56,11 +57,6 @@
 #endif
 
 #include "matrix_invert.hpp"
-
-#if defined(USE_LIBPROJ4)||defined(USE_LIBPROJ4_NEW)
-#include "gshhs.hpp"
-#endif
-
 #include "triangulation.hpp"
 
 using namespace std;
@@ -124,10 +120,9 @@ void LibInit_jmg()
 #endif
 
   const string randomKey[]={"DOUBLE","GAMMA","LONG","NORMAL",
-			    "BINOMIAL","POISSON","UNIFORM","ULONG",KLISTEND};
-  const string randomWarnKey[]={"RAN1", KLISTEND}; //since IDL 8.2, change of random algo (we used already the good one).
-  new DLibFunRetNew(lib::random_fun,string("RANDOMU"),MAXRANK+1,randomKey,randomWarnKey);
-  new DLibFunRetNew(lib::random_fun,string("RANDOMN"),MAXRANK+1,randomKey,randomWarnKey);
+			    "BINOMIAL","POISSON","UNIFORM","ULONG","RAN1",KLISTEND}; //note WARNING: RAN1 has a special meaning for GDL, see code.
+  new DLibFunRetNew(lib::random_fun,string("RANDOMU"),MAXRANK+1,randomKey);
+  new DLibFunRetNew(lib::random_fun,string("RANDOMN"),MAXRANK+1,randomKey);
 
   const string checkmathKey[]={"MASK","NOCLEAR","PRINT",KLISTEND};
   new DLibFunRetNew(lib::check_math_fun,string("CHECK_MATH"),2,checkmathKey);
@@ -160,14 +155,6 @@ void LibInit_jmg()
   new DLibPro(lib::map_proj_gctp_forinit,string("MAP_PROJ_GCTP_FORINIT"),4);
   new DLibPro(lib::map_proj_gctp_revinit,string("MAP_PROJ_GCTP_REVINIT"),4);
 
-  // SA: GSHHS dataset
-  // TODO: USA, ORIENTATION, LIMIT, MLINESTYLE, MLINETHICK, SPACING, T3D, ZVALUE
-  const string map_continentsKey[] = { "MAP_STRUCTURE", "COLOR", "RIVERS", "COUNTRIES", "COASTS", "CONTINENTS", "USA", 
-    "HIRES", "FILL_CONTINENTS",KLISTEND};//WARNING FIXED ORDER for GetMapAsMapStructureKeyword()
-  const string map_continentsWarnKey[] = {"ORIENTATION", "LIMIT",
-         "MLINESTYLE", "MLINETHICK", "SPACING", "T3D", "ZVALUE", KLISTEND};
-  new DLibPro(lib::map_continents, string("MAP_CONTINENTS"), 0, 
-    map_continentsKey, map_continentsWarnKey);
 #endif
   
 
@@ -223,7 +210,12 @@ void LibInit_jmg()
 
   new DLibPro(lib::point_lun,string("POINT_LUN"),2);
 
-  new DLibPro(lib::linkimage,string("LINKIMAGE"),4);
+  const string linkimageKey[]={"FUNCT", "KEYWORDS", "MAX_ARGS", "MIN_ARGS", KLISTEND};
+  new DLibPro( lib::linkimage, string("LINKIMAGE"), 4, linkimageKey, NULL, 2 );
+  const string unlinkimageKey[]={"FORCE", KLISTEND};
+  new DLibPro( lib::unlinkimage, string("UNLINKIMAGE"), 1, unlinkimageKey );
+  const string unlinksymbolKey[]={"FUNCT", KLISTEND};
+  new DLibPro( lib::unlinksymbol, string("UNLINKSYMBOL"), 2, unlinksymbolKey, NULL, 2 );
 
   new DLibPro(lib::wait_pro,string("WAIT"),1);
 

@@ -32,6 +32,7 @@
 #include "dinterpreter.hpp"
 #include "gdljournal.hpp"
 #include "gdleventhandler.hpp"
+#include "basic_pro_jmg.hpp"
 
 #ifdef USE_MPI
 #include "mpi.h"
@@ -47,12 +48,7 @@
 #include "print_tree.hpp"
 #endif
 
-#if (__cplusplus >= 201103L || _MSC_VER >= 1800) && !defined(__MINGW32__)
-#   include <thread> // C++11
-#   define HAVE_CXX11THREAD
-#else
-#   include <pthread.h>
-#endif
+#include <thread> // C++11
 
 using namespace std;
 using namespace antlr;
@@ -65,10 +61,10 @@ GDLInterpreter::HeapT     GDLInterpreter::heap;
 GDLInterpreter::ObjHeapT  GDLInterpreter::objHeap; 
 SizeT                     GDLInterpreter::objHeapIx;
 SizeT                     GDLInterpreter::heapIx;
-EnvStackT             GDLInterpreter::callStack;
-DLong                   GDLInterpreter::stepCount;
-
-ProgNode GDLInterpreter::NULLProgNode;
+EnvStackT                 GDLInterpreter::callStack;
+DLong                     GDLInterpreter::stepCount;
+bool                      GDLInterpreter::noInteractive; // To exit on error or stop in line execution mode (gdl -e do_something)
+ProgNode                  GDLInterpreter::NULLProgNode;
 ProgNodeP GDLInterpreter::NULLProgNodeP = &GDLInterpreter::NULLProgNode;
 
 void LibInit(); // defined in libinit.cpp
@@ -475,25 +471,71 @@ void GDLInterpreter::SetProIx( ProgNodeP f)
     f->proIx=GetProIx(f);//->getText());
 }
 
-int GDLInterpreter::GetProIx( ProgNodeP f)
+int GDLInterpreter::GetProIx(ProgNodeP f)
 {
   string subName = f->getText();
-  int proIx=ProIx(subName);
-  if( proIx == -1)
-    {
-      // trigger reading/compiling of source file
-      /*bool found=*/ SearchCompilePro(subName, true);
-	  
-      proIx=ProIx(subName);
-#ifndef AUTO_PRINT_EXPR
-      if( proIx == -1)
-	{
-	  throw GDLException(f,"Procedure not found: "+subName,true,false);
-	}
-#endif
+  int proIx = ProIx(subName);
+  if (proIx == -1) {
+    // trigger reading/compiling of source file
+    /*bool found=*/ SearchCompilePro(subName, true);
+
+    proIx = ProIx(subName);
+
+    //eliminate the simple case
+    if (proIx != -1) return proIx;
+    //noInteractive: throw
+    if (noInteractive) throw GDLException(f, "Procedure not found: " + subName, true, false);
+
+    //attempts an implied print. All this should be done in the ANTLR stuff of course.
+    //We are here because the text is interpreted as a procedure. It is not (otherwise it would have been found),
+    //but it could just be one or a series of variable names, such as in "a=dist(3) & b=findgen(2) & a,b"
+    //If it is not a variable, doing "print,a" will produce an error "PRINT: Variable is undefined: A". This is not what
+    //we want, we want "% Procedure not found: A". So we "print" only if all the names are indeed bona fide variables.
+    //gather types of siblings. if they are not all "ref", do not tempt anything
+    EnvStackT& callStack = ProgNode::interpreter->CallStack();
+    DLong curlevnum = callStack.size();
+    if (curlevnum > 1) throw GDLException(f, "Procedure not found: " + subName, true, false);
+    DSubUD* pro = static_cast<DSubUD*> (callStack[curlevnum - 1]->GetPro());
+    bool ok = true;
+    ProgNodeP test = f;
+    std::string what = test->getText();
+    int xI = pro->FindVar(what);
+    if (xI == -1) {
+      BaseGDL** varPtr = pro->GetCommonVarPtr(what);
+      if (varPtr == NULL) ok = false;
     }
+    while (ok) {
+      test = test->GetNextSibling();
+      if (!test) break;
+      string type = test->getText();
+      string varName = test->GetFirstChild()->getText();
+      ok = (type == "ref"); //only simple variables.
+      if (ok) { //test it is a REAL variable.
+        xI = pro->FindVar(varName);
+        if (xI == -1) {
+          BaseGDL** varPtr = pro->GetCommonVarPtr(varName);
+          if (varPtr == NULL) ok = false;
+        }
+      }
+      if (!ok) break;
+      what += "," + test->GetFirstChild()->getText(); //for "ref" firstChild contains the name to be printed
+    }
+    if (ok) { //only simple things like "a,b,c"
+      try {
+        ProgNode::interpreter->executeLine.clear(); // clear EOF (for executeLine)
+        ProgNode::interpreter->executeLine.str("print,/implied_print," + what);
+        std::istream execute_me(ProgNode::interpreter->executeLine.rdbuf());
+        ProgNode::interpreter->ExecuteLine(&execute_me, 0);
+        ProgNode::interpreter->SetRetTree(f->GetLastSibling()->GetNextSibling());
+        return proIx;
+      } catch (GDLException& e) {
+        throw GDLException(f, "Procedure not found: " + subName, true, false);
+      }
+    } else throw GDLException(f, "Procedure not found: " + subName, true, false);
+  }
   return proIx;
 }
+
 int GDLInterpreter::GetProIx( const string& subName)
 {
   int proIx=ProIx(subName);
@@ -1270,29 +1312,18 @@ DInterpreter::CommandCode DInterpreter::ExecuteLine( istream* in, SizeT lineOffs
   return CC_OK;
 }
 
-#ifdef HAVE_CXX11THREAD
 void inputThread() {
-#else
-void *inputThread(void*) {
-#endif
     while (1) {
       // patch by Ole, 2017-01-06
       //char ch = getchar(); if (ch==EOF) return NULL;
       char ch = getchar();
       if (ch==EOF) {
-#ifdef HAVE_CXX11THREAD
 	return;
-#else
-	return NULL;
-#endif
       }        
       inputstr += ch;
       if (ch == '\n')
 	break;
     }
-#ifndef HAVE_CXX11THREAD
-    return NULL;
-#endif
 }
 
 // if readline is not available or !EDIT_INPUT set to zero
@@ -1301,18 +1332,17 @@ char* DInterpreter::NoReadline( const string& prompt)
   if (isatty(0)) cout << prompt << flush;
   if( feof(stdin)) return NULL;
 
-#ifdef HAVE_CXX11THREAD
   thread th(inputThread);
-#else
-  pthread_t th;
-  pthread_create(&th, NULL, inputThread, NULL);
-#endif
 
   for (;;)
     {
         GDLEventHandler();
         if (inputstr.size() && inputstr[inputstr.size() - 1] == '\n') break;
-        if (feof(stdin)) return NULL;
+        if (feof(stdin)) 
+        {
+          th.join();
+          return NULL;
+        }
 #ifdef WIN32
         Sleep(10);
 #else
@@ -1326,11 +1356,7 @@ char* DInterpreter::NoReadline( const string& prompt)
   strcpy(result, inputstr.c_str()); // copies including terminating '\0'
   inputstr.clear();
 
-#ifdef HAVE_CXX11THREAD
   th.join();
-#else
-  pthread_join(th, NULL);
-#endif
 
   return result;
 }
@@ -1666,6 +1692,7 @@ RetCode DInterpreter::InterpreterLoop(const string& startup,
   if (statement.length() > 0) {
     // execute single statement and exit (a new-line is added to statement in gdl.cpp)
     // (e.g. $ gdl -e "print, 'hello world'")
+    noInteractive=true;
     istringstream iss(statement, ios_base::out);
     try {
       ExecuteLine(&iss);
@@ -1781,6 +1808,7 @@ RetCode DInterpreter::InterpreterLoop(const string& startup,
         ResetObjects();
         ResetHeap();
         if (fullResetCmd) {
+          lib::ResetDLLs();
           PurgeContainer(libFunList);
           PurgeContainer(libProList);
         }

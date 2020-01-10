@@ -178,6 +178,9 @@ static bool trace_me;
 // SA: for use in COMMAND_LINE_ARGS()
 namespace lib {
   extern std::vector<std::string> command_line_args;
+#ifdef _WIN32
+  bool posixpaths;
+#endif
   bool gdlarg_present(const char* s)
   {
 		for (size_t i = 0; i < command_line_args.size(); i++)
@@ -210,6 +213,13 @@ int main(int argc, char *argv[])
   bool strict_syntax=false;
   bool syntaxOptionSet=false;
 
+  //start with a default value:
+  useWxWidgetsForGraphics = false;
+  bool force_no_wxgraphics = false;
+  useDSFMTAcceleration = true;
+#ifdef _WIN32
+  lib::posixpaths = false;
+#endif
   for( SizeT a=1; a< argc; ++a)
     {
       if( string( argv[a]) == "--help" | string( argv[a]) == "-h")
@@ -227,13 +237,18 @@ int main(int argc, char *argv[])
       cout << "                     Use enviromnment variable \"GDL_IS_FUSSY\" to set up permanently this feature." << endl;
 	  cout << "  --sloppy           Sets the traditional (default) compiling option where \"()\"  can be used both with functions and arrays." << endl;
       cout << "                     Needed to counteract temporarily the effect of the enviromnment variable \"GDL_IS_FUSSY\"." << endl;
-          cout << endl;
+      cout << "  --use-wx           Tells GDL to use WxWidgets graphics instead of X11 or Windows. (nicer plots)." << endl;
+      cout << "                     Also enabled by setting the environment variable GDL_USE_WX to a non-null value." << endl;
+      cout << "  --no-use-wx        Tells GDL no to use WxWidgets graphics, even if env. var. \"GDL_USE_WX\" is set." << endl;
+      cout << "  --no-dSFMT         Tells GDL not to use double precision SIMD oriented Fast Mersenne Twister(dSFMT) for random doubles." << endl;
+      cout << "                     Also disable by setting the environment variable GDL_NO_DSFMT to a non-null value." << endl;
+      cout << endl;
 	  cout << "IDL-compatible options:" << endl;
 	  cout << "  -arg value tells COMMAND_LINE_ARGS() to report" << endl;
           cout << "             the following argument (may be specified more than once)" << endl;
 	  cout << "  -args ...  tells COMMAND_LINE_ARGS() to report " << endl;
           cout << "             all following arguments" << endl;
-          cout << "  -e value   execute given statement and exit (last occurence taken into account only," << endl;
+          cout << "  -e value   execute given statement and exit (last occurrence taken into account only," << endl;
           cout << "             executed after startup file, may not be specified together with batch files)" << endl;
 	  cout << "  -pref=/path/to/params_file  loads the specified preference file" << endl;
 	  cout << "  -quiet (--quiet, -q) suppress welcome messages" << endl;
@@ -293,7 +308,7 @@ int main(int argc, char *argv[])
 	  // (e.g. $ gdl -e "")
 	}
       else if (
-	       string(argv[a]) == "-demo" || 
+	    string(argv[a]) == "-demo" || 
         string(argv[a]) == "-em" || 
         string(argv[a]) == "-novm" ||
         string(argv[a]) == "-queue" ||
@@ -315,7 +330,22 @@ int main(int argc, char *argv[])
       {
           strict_syntax = false;
           syntaxOptionSet = true;
+      }
+      else if (string(argv[a]) == "--no-dSFMT")
+      {
+           useDSFMTAcceleration = false;
+      }
+      else if (string(argv[a]) == "--use-wx")
+      {
+          useWxWidgetsForGraphics = true;
       }      
+#ifdef _WIN32
+      else if (string(argv[a]) == "--posix") lib::posixpaths=true;
+#endif
+      else if (string(argv[a]) == "--no-use-wx")
+      {
+           force_no_wxgraphics = true;
+      }
       else if (string(argv[a]) == "--fakerelease")
       {
         if (a == argc - 1)
@@ -341,7 +371,14 @@ int main(int argc, char *argv[])
     cerr << argv[0] << ": " << "-e option cannot be specified with batch files" << endl;
     return 0;
   }
-
+  
+  //before InitGDL() as InitGDL() starts graphic!
+  std::string useWX=GetEnvString("GDL_USE_WX");
+  if ( useWX.length() > 0) useWxWidgetsForGraphics=true; //not necessary "YES".
+  if (force_no_wxgraphics) useWxWidgetsForGraphics=false; //this has the last answer, whatever the setup.
+  if (useWxWidgetsForGraphics) cerr << "- Using WxWidgets as graphics library (windows and widgets)." <<endl;
+  
+  
   InitGDL();
 
   // must be after !cpu initialisation
@@ -361,8 +398,10 @@ int main(int argc, char *argv[])
         "- Default library routine search path used (GDL_PATH/IDL_PATH env. var. not set): " << endl << 
         "  " << gdlPath << endl;
     }
-  std::string useWX=GetEnvString("GDL_USE_WX");
-  if (useWX == "YES" || useWX == "yes") cerr << "- Using WxWidgets as graphics library (windows and widgets)." <<endl;
+
+  
+  if (useDSFMTAcceleration && (GetEnvString("GDL_NO_DSFMT").length() > 0)) useDSFMTAcceleration=false;
+
   SysVar::SetGDLPath( gdlPath);
   
   if (!pretendRelease.empty()) SysVar::SetFakeRelease(pretendRelease);

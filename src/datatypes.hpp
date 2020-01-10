@@ -19,19 +19,12 @@
 #ifndef DATATYPES_HPP_
 #define DATATYPES_HPP_
 
-#include <iomanip>
-#include <sstream>
-//#include <vector>
-//#include <valarray>
-#include <string>
 
-//#include <complex>
-// #include <deque>
-
-// #include <type_traits>
 #include "typedefs.hpp"
 #include "basegdl.hpp"
 #include "typetraits.hpp"
+
+#include <string>
 
 #if defined(__GNUC__) && !defined(__INTEL_COMPILER)
 // by default intel C++ defines __GNUC__
@@ -244,12 +237,18 @@ static	void operator delete( void *ptr);
 
   // not all compilers can handle template friend member functions
 #ifndef _MSC_VER
-#if defined( TEMPLATE_FRIEND_OK_) || (__GNUC__ >= 4)
+#  if __GNUC__ >= 4 
+#    if defined(__clang__)
+       // suppress: warning: dependent nested name specifier 'Data_<Sp2>::' for friend class declaration is not supported; turning off access control for 'Data_' [-Wunsupported-friend]
+#      pragma clang diagnostic push
+#      pragma clang diagnostic ignored "-Wunsupported-friend"
   // make all other Convert2 functions friends
   template<class Sp2>  
   friend BaseGDL* Data_<Sp2>::Convert2( DType destTy, 
 					BaseGDL::Convert2Mode);
-#else
+#      pragma clang diagnostic pop
+#    endif
+#  else
   // this explicit version does not work with GCC 4.0
   friend BaseGDL* Data_<SpDByte>::Convert2( DType destTy, BaseGDL::Convert2Mode);
   friend BaseGDL* Data_<SpDInt>::Convert2( DType destTy, BaseGDL::Convert2Mode);
@@ -266,15 +265,15 @@ static	void operator delete( void *ptr);
   friend BaseGDL* Data_<SpDComplex>::Convert2( DType destTy, BaseGDL::Convert2Mode);
   friend BaseGDL* Data_<SpDComplexDbl>::Convert2( DType destTy, BaseGDL::Convert2Mode);
 
-#endif
+#  endif
 #endif
 
   bool True();
   bool False();
   bool LogTrue();
   bool LogTrue( SizeT ix);
-  DLong* Where( bool comp, SizeT& count);
-  DByte* TagWhere(SizeT& count);
+  void Where(DLong* &ret, SizeT &passed_count, bool comp, DLong* &comp_ret);
+  void Where(DLong64* &ret, SizeT &passed_count, bool comp, DLong64* &comp_ret);
   Data_<SpDByte>* LogNeg();
   int  Sgn(); // returns -1,0,1
   bool Equal( BaseGDL*) const;

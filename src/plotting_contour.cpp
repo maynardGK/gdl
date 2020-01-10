@@ -197,8 +197,8 @@ namespace lib
       GetMinMaxVal ( yVal, &yStart, &yEnd );
       //XRANGE and YRANGE overrides all that, but  Start/End should be recomputed accordingly
       DDouble xAxisStart, xAxisEnd, yAxisStart, yAxisEnd;
-      bool setx=gdlGetDesiredAxisRange(e, "X", xAxisStart, xAxisEnd);
-      bool sety=gdlGetDesiredAxisRange(e, "Y", yAxisStart, yAxisEnd);
+      bool setx=gdlGetDesiredAxisRange(e, XAXIS, xAxisStart, xAxisEnd);
+      bool sety=gdlGetDesiredAxisRange(e, YAXIS, yAxisStart, yAxisEnd);
       if (setx) {
         xStart = xAxisStart;
         xEnd = xAxisEnd;
@@ -213,7 +213,7 @@ namespace lib
       GetMinMaxVal ( zVal, &datamin, &datamax );
       zStart=datamin;
       zEnd=datamax;
-      setZrange = gdlGetDesiredAxisRange(e, "Z", zStart, zEnd);
+      setZrange = gdlGetDesiredAxisRange(e, ZAXIS, zStart, zEnd);
 
       return false;
     }
@@ -270,15 +270,15 @@ namespace lib
 
       // [XY]STYLE
       DLong xStyle=0, yStyle=0, zStyle=0; ;
-      gdlGetDesiredAxisStyle(e, "X", xStyle);
-      gdlGetDesiredAxisStyle(e, "Y", yStyle);
-      gdlGetDesiredAxisStyle(e, "Z", zStyle);
+      gdlGetDesiredAxisStyle(e, XAXIS, xStyle);
+      gdlGetDesiredAxisStyle(e, YAXIS, yStyle);
+      gdlGetDesiredAxisStyle(e, ZAXIS, zStyle);
 
       // MARGIN
       DFloat xMarginL, xMarginR, yMarginB, yMarginT, zMarginF, zMarginB;
-      gdlGetDesiredAxisMargin(e, "X", xMarginL, xMarginR);
-      gdlGetDesiredAxisMargin(e, "Y", yMarginB, yMarginT);
-      gdlGetDesiredAxisMargin(e, "Z", zMarginF, zMarginB);
+      gdlGetDesiredAxisMargin(e, XAXIS, xMarginL, xMarginR);
+      gdlGetDesiredAxisMargin(e, YAXIS, yMarginB, yMarginT);
+      gdlGetDesiredAxisMargin(e, ZAXIS, zMarginF, zMarginB);
 
       // handle Log options passing via Keywords
       // note: undocumented keywords [xyz]type still exist and
@@ -309,12 +309,12 @@ namespace lib
 
       if ( ( xStyle&1 )!=1 )
 	{
-	  PLFLT intv=gdlAdjustAxisRange (e, "X", xStart, xEnd, xLog );
+	  PLFLT intv=gdlAdjustAxisRange (e, XAXIS, xStart, xEnd, xLog );
 	}
 
       if ( ( yStyle&1 )!=1 )
 	{
-	  PLFLT intv=gdlAdjustAxisRange (e, "Y", yStart, yEnd, yLog );
+	  PLFLT intv=gdlAdjustAxisRange (e, YAXIS, yStart, yEnd, yLog );
 	}
 
       static int MIN_VALUE=e->KeywordIx("MIN_VALUE");
@@ -329,7 +329,7 @@ namespace lib
       // then only apply expansion  of axes:
       if ( ( zStyle&1 )!=1 )
 	{
-	  PLFLT intv=gdlAdjustAxisRange (e, "Z", zStart, zEnd, zLog );
+	  PLFLT intv=gdlAdjustAxisRange (e, ZAXIS, zStart, zEnd, zLog );
 	}
 
       //OVERPLOT: get stored range values instead to use them!
@@ -356,12 +356,11 @@ namespace lib
       if (overplot) //retrieve information in case they are not in the command line ans apply
                     // some computation (alas)!
 	{
-	  gdlGetAxisType("X", xLog);
-	  gdlGetAxisType("Y", yLog);
-	  gdlGetAxisType("Z", zLog);
+	  gdlGetAxisType(XAXIS, xLog);
+	  gdlGetAxisType(YAXIS, yLog);
+	  gdlGetAxisType(ZAXIS, zLog);
 	  GetCurrentUserLimits(actStream, xStart, xEnd, yStart, yEnd);
-	  gdlGetCurrentAxisRange("Z", zStart, zEnd); //we should memorize the number of levels!
-
+      
 	  if (!doT3d) {
 	    restorelayout=true;
 	    actStream->OnePageSaveLayout(); // we'll give back actual plplot's setup at end
@@ -377,7 +376,8 @@ namespace lib
 
 	    actStream->vpor( wx[0], wx[1], wy[0], wy[1] );
 	    actStream->wind( pxStart, pxEnd, pyStart, pyEnd );
-	  }
+	  } else gdlGetCurrentAxisRange(ZAXIS, zStart, zEnd); //we should memorize the number of levels!
+
 	}
 
       static DDouble x0,y0,xs,ys; //conversion to normalized coords
@@ -624,9 +624,10 @@ namespace lib
 	  bool tidyGrid1WorldData=false;
 	  bool tidyGrid2WorldData=false;
 	  bool oneDim=true;
+      bool rank1=( xVal->Rank ( )==1&&yVal->Rank ( )==1 );
 	  // the Grids:
 	  // 1 DIM X & Y
-	  if ( xVal->Rank ( )==1&&yVal->Rank ( )==1 && !mapSet) //mapSet: must create a 2d grid 
+	  if ( rank1 && !mapSet) //mapSet: must create a 2d grid 
 	    {
 	      oneDim=true;
 	      xg1 = new PLFLT[xEl];
@@ -642,7 +643,7 @@ namespace lib
 	      if (yLog) for ( SizeT i=0; i<yEl; i++ ) cgrid1.yg[i] = cgrid1.yg[i]>0?log10(cgrid1.yg[i]):1E-12;
 	      tidyGrid1WorldData=true;
 	    }
-	  else //if ( xVal->Rank ( )==2&&yVal->Rank ( )==2 )
+	  else //rank 2 or mapset
 	    {
 	      oneDim=false;
 
@@ -652,15 +653,25 @@ namespace lib
 	      cgrid2.nx=xEl;
 	      cgrid2.ny=yEl;
 	      //create 2D grid
-	      for ( SizeT i=0; i<xEl; i++ )
-		{
-		  for ( SizeT j=0; j<yEl; j++ )
-		    {
-		      cgrid2.xg[i][j]=mapSet?(*xVal)[i]:(*xVal)[j*( xEl )+i];
-		      cgrid2.yg[i][j]=mapSet?(*yVal)[j]:(*yVal)[j*( xEl )+i];
-		    }
-		}
+          if (mapSet && rank1) {
+           for (SizeT i = 0; i < xEl; i++) {
+              for (SizeT j = 0; j < yEl; j++) {
+                cgrid2.xg[i][j] = (*xVal)[i] ;
+                cgrid2.yg[i][j] = (*yVal)[j] ;
+              }
+            }
+          } else {
+            for (SizeT i = 0; i < xEl; i++) {
+              for (SizeT j = 0; j < yEl; j++) {
+                cgrid2.xg[i][j] = (*xVal)[j * (xEl) + i];
+                cgrid2.yg[i][j] = (*yVal)[j * (xEl) + i];
+              }
+            }
+          }
 	      //apply projection transformations:
+          //This is going to work in a very restricted case.
+          //One MUST instead plot the contours as for map_continents, i.e., using gdlPolygonPlot.
+          //this will be feasible as soon as we use our  own contour-making algorithm, not plplot's.
 #ifdef USE_LIBPROJ4
 	      if ( mapSet )
 		{
@@ -906,12 +917,12 @@ namespace lib
 	  if (stopClip) stopClipping(actStream);
 	  actStream->Free2dGrid(map, xEl, yEl);
 	}
-      //finished? Store Zrange and Loginess unless we are overplot:
-      if ( make2dBox || make3dBox )
-	{
-	  gdlStoreAxisCRANGE("Z", zStart, zEnd, zLog);
-	  gdlStoreAxisType("Z",zLog);
-	}
+////      finished? Store Zrange and Loginess unless we are overplot:
+//      if ( make2dBox || make3dBox )
+//	{
+	  gdlStoreAxisCRANGE(ZAXIS, zStart, zEnd, zLog);
+	  gdlStoreAxisType(ZAXIS,zLog);
+//	}
 
       if (doT3d) {
         actStream->stransform(NULL,NULL); //remove transform BEFORE writing axes, ticks..
@@ -936,8 +947,8 @@ namespace lib
 	  actStream->w3d(scale, scale, scale*(1.0 - zValue),
 			 t3xStart,t3xEnd,t3yStart,t3yEnd,t3zStart,t3zEnd,
 			 alt, az);
-	  gdlAxis3(e, actStream, "X", xStart, xEnd, xLog);
-	  gdlAxis3(e, actStream, "Y", yStart, yEnd, yLog);
+	  gdlAxis3(e, actStream, XAXIS, xStart, xEnd, xLog);
+	  gdlAxis3(e, actStream, YAXIS, yStart, yEnd, yLog);
 	  break;
 	case XY: // X->Y Y->X plane XY
 	  t3yStart=(xLog)?log10(xStart):xStart,
@@ -949,8 +960,8 @@ namespace lib
 	  actStream->w3d(scale, scale, scale*(1.0 - zValue),
 			 t3xStart,t3xEnd,t3yStart,t3yEnd,t3zStart,t3zEnd,
 			 alt, az);
-	  gdlAxis3(e, actStream, "Y", xStart, xEnd, xLog);
-	  gdlAxis3(e, actStream, "X", yStart, yEnd, yLog);
+	  gdlAxis3(e, actStream, XAXIS, yStart, yEnd, yLog);
+	  gdlAxis3(e, actStream, YAXIS, xStart, xEnd, xLog);
 	  break;
 	case XZ: // Y->Y X->Z plane YZ
 	  t3zStart=(xLog)?log10(xStart):xStart,
@@ -962,8 +973,8 @@ namespace lib
 	  actStream->w3d(scale, scale, scale,
 			 t3xStart,t3xEnd,t3yStart,t3yEnd,t3zStart,t3zEnd,
 			 alt, az);
-	  gdlAxis3(e, actStream, "Z", xStart, xEnd, xLog, 0);
-	  gdlAxis3(e, actStream, "Y", yStart, yEnd, yLog);
+	  gdlAxis3(e, actStream, ZAXIS, xStart, xEnd, xLog, 0);
+	  gdlAxis3(e, actStream, YAXIS, yStart, yEnd, yLog);
 	  break;
 	case YZ: // X->X Y->Z plane XZ
 	  t3xStart=(xLog)?log10(xStart):xStart,
@@ -975,8 +986,8 @@ namespace lib
 	  actStream->w3d(scale, scale, scale,
 			 t3xStart,t3xEnd,t3yStart,t3yEnd,t3zStart,t3zEnd,
 			 alt, az);
-	  gdlAxis3(e, actStream, "X", xStart, xEnd, xLog);
-	  gdlAxis3(e, actStream, "Z", yStart, yEnd, yLog,1);
+	  gdlAxis3(e, actStream, XAXIS, xStart, xEnd, xLog);
+	  gdlAxis3(e, actStream, ZAXIS, yStart, yEnd, yLog,1);
 	  break;
 	case XZXY: //X->Y Y->Z plane YZ
 	  t3yStart=(xLog)?log10(xStart):xStart,
@@ -988,8 +999,8 @@ namespace lib
 	  actStream->w3d(scale, scale, scale,
 			 t3xStart,t3xEnd,t3yStart,t3yEnd,t3zStart,t3zEnd,
 			 alt, az);
-	  gdlAxis3(e, actStream, "Y", xStart, xEnd, xLog);
-	  gdlAxis3(e, actStream, "Z", yStart, yEnd, yLog);
+	  gdlAxis3(e, actStream, YAXIS, xStart, xEnd, xLog);
+	  gdlAxis3(e, actStream, ZAXIS, yStart, yEnd, yLog);
 	  break;
 	case XZYZ: //X->Z Y->X plane XZ
 	  t3zStart=(xLog)?log10(xStart):xStart,
@@ -1001,8 +1012,8 @@ namespace lib
 	  actStream->w3d(scale, scale, scale,
 			 t3xStart,t3xEnd,t3yStart,t3yEnd,t3zStart,t3zEnd,
 			 alt, az);
-	  gdlAxis3(e, actStream, "Z", xStart, xEnd, xLog,1);
-	  gdlAxis3(e, actStream, "X", yStart, yEnd, yLog);
+	  gdlAxis3(e, actStream, ZAXIS, xStart, xEnd, xLog,1);
+	  gdlAxis3(e, actStream, XAXIS, yStart, yEnd, yLog);
 	  break;
         }
         // title and sub title

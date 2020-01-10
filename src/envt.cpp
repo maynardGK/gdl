@@ -743,7 +743,7 @@ const string EnvBaseT::GetString( BaseGDL*& p, bool calledFromHELP)
 	  (p != NULL && env.Loc( ix) == p) 
 	  )
 	{
-	  if( subUD != NULL) {return subUD->GetVarName(ix);break;}
+	  if( subUD != NULL) {return subUD->GetVarName(ix);}
 
 	  string callerName = Default;
 	  if( this->Caller() != NULL)
@@ -766,11 +766,19 @@ const string EnvBaseT::GetString( BaseGDL*& p, bool calledFromHELP)
   //   if( sysVar != NULL) return sysVar->Name();
 
   // search common blocks
-  if( name == Default && subUD != NULL)
+  if (name == Default && subUD != NULL)
     {
       string varName;
-      if( subUD->GetCommonVarName4Help( p, varName)) 
-	return varName;
+      if (calledFromHELP)
+        {
+          if (subUD->GetCommonVarName4Help (p, varName))
+            return varName;
+        }
+      else
+        {
+          if (subUD->GetCommonVarName (p, varName))
+            return varName;
+        }
     }
 
   if( !p)
@@ -1320,7 +1328,7 @@ bool EnvBaseT::Remove(int* rindx)
 	while( ix >= 0)
 	{
 		inrem++;
-		if(debug)	printf(" env.now.size() = %d  env[%d] = 0x%x ",
+		if(debug)	printf(" env.now.size() = %d  env[%d] = %p ",
 				osz - inrem,
 				ix,static_cast <const void *>(env[ix]) );
 		if ( env[ix] != NULL) GDLDelete( env[ix]);
@@ -1364,8 +1372,10 @@ int EnvBaseT::findvar(BaseGDL* delP)
 
 void EnvBaseT::SetNextParUnchecked( BaseGDL* const nextP) // by value (reset loc)
 {
-  //   if(!( static_cast<int>(parIx - pro->key.size()) < pro->nPar))
-  assert( static_cast<int>(parIx - pro->key.size()) < pro->nPar);
+  if(!( static_cast<int>(parIx - pro->key.size()) < pro->nPar)){
+	  throw GDLException(callingNode,
+			     pro->Name()+": Incorrect number of arguments.",false,false);
+	}
   env.Set(parIx++,nextP); // check done in parameter_def
 }
 void EnvBaseT::SetNextParUncheckedVarNum( BaseGDL* const nextP) // by reference (reset env)
@@ -1376,7 +1386,10 @@ void EnvBaseT::SetNextParUncheckedVarNum( BaseGDL* const nextP) // by reference 
 
 void EnvBaseT::SetNextParUnchecked( BaseGDL** const nextP) // by reference (reset env)
 {
-  assert( static_cast<int>(parIx - pro->key.size()) < pro->nPar);
+  if(!( static_cast<int>(parIx - pro->key.size()) < pro->nPar)){
+	  throw GDLException(callingNode,
+			     pro->Name()+": Incorrect number of arguments.",false,false);
+	}
   env.Set(parIx++,nextP);
 }
 void EnvBaseT::SetNextParUncheckedVarNum( BaseGDL** const nextP) // by reference (reset env)

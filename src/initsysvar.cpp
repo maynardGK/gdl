@@ -56,7 +56,7 @@ namespace SysVar
   UInt nullIx, trueIx, falseIx, pathIx, promptIx, edit_inputIx, quietIx,
     dIx, pIx, xIx, yIx, zIx, vIx, gdlWarningIx, gdlIx, cIx, MouseIx,
     errorStateIx, errorIx, errIx, err_stringIx, valuesIx,
-    journalIx, exceptIx, mapIx, cpuIx, dirIx, GshhsDirIx, stimeIx,
+    journalIx, exceptIx, mapIx, cpuIx, dirIx, stimeIx,
     warnIx, usersymIx, orderIx, MakeDllIx, colorIx;
 
   // !D structs
@@ -275,12 +275,6 @@ namespace SysVar
     return (*static_cast<DLongGDL*>( pStruct->GetTag( tag)))[0];
   }
 
-  const DString& GshhsDir()
-  {
-    DVar& var = *sysVarList[GshhsDirIx];
-    return static_cast<DStringGDL&>(*var.Data())[0];
-  }
-
   DStringGDL* STime()
   {
     DVar& var = *sysVarList[ stimeIx];
@@ -335,6 +329,13 @@ namespace SysVar
   {
     DVar& var = *sysVarList[ MouseIx];
     return static_cast<DStructGDL*>(var.Data());
+  }
+
+  // returns !GDL
+  DStructGDL* GDLconfig()
+  {
+    DVar* sysVarList_gdlIx = sysVarList[ gdlIx];
+    return static_cast<DStructGDL*>(sysVarList_gdlIx->Data());    
   }
 
   DStructGDL* Cpu()
@@ -539,7 +540,19 @@ namespace SysVar
     // printf("seconds since the Epoch: %ld\n", (long) t_of_day);
 
     gdlStruct->NewTag("EPOCH", new DLongGDL((long) t_of_day));
+    gdlStruct->NewTag("GDL_NO_DSFMT", new DByteGDL(0));
+    gdlStruct->NewTag("GDL_USE_WX", new DByteGDL(0));
+#ifdef _WIN32
+    std::string use_posix=GetEnvString("GDL_USE_POSIX");
+    if( use_posix.length() > 0) lib::posixpaths = true;
+    gdlStruct->NewTag("GDL_POSIX", new DByteGDL(lib::posixpaths));
+#else
+    gdlStruct->NewTag("GDL_POSIX", new DByteGDL(1));
+#endif
+    gdlStruct->NewTag("MAP_QUALITY", new DStringGDL("CRUDE"));
+
     DVar *gdl        = new DVar( "GDL", gdlStruct);
+    gdlIx=sysVarList.size();
     sysVarList.push_back(gdl);
     sysVarRdOnlyList.push_back( gdl); // make it read only
 
@@ -577,7 +590,7 @@ namespace SysVar
     // Speed of Light in Vacuum [m/s]
     constantList ->NewTag("C", new DDoubleGDL(299792458.));
     // Degrees to radians
-    constantList ->NewTag("DTOR", new DDoubleGDL((*dpiData)[0] / 180.));
+    constantList ->NewTag("DTOR", new DDoubleGDL(0.0174532925199433));  //exact value in double. previous was wrong.
     // Elementary Charge [Coulon]
     constantList ->NewTag("E", new DDoubleGDL(1.602176565e-19));
     // Electric Vacuum Permittivity [F/m]
@@ -699,53 +712,55 @@ namespace SysVar
     DStructGDL*  ver = new DStructGDL( "!VERSION");
 #ifdef _WIN32
 #ifdef __MINGW32__
-	typedef void (WINAPI *GetNativeSystemInfoFunc)(LPSYSTEM_INFO);
-	HMODULE hModule = LoadLibraryW(L"kernel32.dll");
-	GetNativeSystemInfoFunc GetNativeSystemInfo =(GetNativeSystemInfoFunc) 
-            GetProcAddress(hModule, "GetNativeSystemInfo");
+    typedef void (WINAPI *GetNativeSystemInfoFunc)(LPSYSTEM_INFO);
+    HMODULE hModule = LoadLibraryW(L"kernel32.dll");
+    GetNativeSystemInfoFunc GetNativeSystemInfo =(GetNativeSystemInfoFunc) 
+      GetProcAddress(hModule, "GetNativeSystemInfo");
 #endif
-	const char* SysName = "Windows";
-	SYSTEM_INFO stInfo;
-	GetNativeSystemInfo( &stInfo );
-	DStringGDL *arch;
-	switch(stInfo.wProcessorArchitecture) {
-	case PROCESSOR_ARCHITECTURE_AMD64:
-		arch = new DStringGDL("x64");
-		break;
-	case PROCESSOR_ARCHITECTURE_INTEL:
-		arch = new DStringGDL("x86");
-		break;
-	case PROCESSOR_ARCHITECTURE_ARM:
-		arch = new DStringGDL("ARM");
-		break;
-	default:
-		arch = new DStringGDL("unknown");
-	}
-	ver->NewTag("ARCH", arch); 
-    ver->NewTag("OS", new DStringGDL(SysName));    
-    ver->NewTag("OS_FAMILY", new DStringGDL(SysName)); 
-    ver->NewTag("OS_NAME", new DStringGDL(SysName)); 
+    const char* SysName = "Windows";
+    SYSTEM_INFO stInfo;
+    GetNativeSystemInfo( &stInfo );
+    DStringGDL *arch;
+    switch(stInfo.wProcessorArchitecture) {
+    case PROCESSOR_ARCHITECTURE_AMD64:
+      arch = new DStringGDL("x64");
+      break;
+    case PROCESSOR_ARCHITECTURE_INTEL:
+      arch = new DStringGDL("x86");
+      break;
+    case PROCESSOR_ARCHITECTURE_ARM:
+      arch = new DStringGDL("ARM");
+      break;
+    default:
+      arch = new DStringGDL("unknown");
+    }
+    ver->NewTag("ARCH", arch); 
+    ver->NewTag("OS", new DStringGDL(SysName));
+    ver->NewTag("OS_FAMILY", new DStringGDL(SysName));
+    ver->NewTag("OS_NAME", new DStringGDL(SysName));
 #else
     struct utsname uts;
     uname(&uts);
-    ver->NewTag("ARCH", new DStringGDL( uts.machine)); 
+    ver->NewTag("ARCH", new DStringGDL( uts.machine));
     const char *SysName=uts.sysname;
     if (strcmp(SysName,"Linux") ==0) SysName="linux";
     if (strcmp(SysName,"Darwin") ==0) SysName="darwin";
     ver->NewTag("OS", new DStringGDL(SysName));    //correct IDL order
-    ver->NewTag("OS_FAMILY", new DStringGDL( "unix")); 
-    ver->NewTag("OS_NAME", new DStringGDL(SysName)); 
+    ver->NewTag("OS_FAMILY", new DStringGDL( "unix"));
+    // AC 2018-sep-07
+    if (strcmp(SysName,"darwin") ==0) SysName="Mac OS X";
+    ver->NewTag("OS_NAME", new DStringGDL(SysName));
 #endif
 
     ver->NewTag("RELEASE", new DStringGDL( "8.2")); //we are at least 6.4
-    ver->NewTag("BUILD_DATE", new DStringGDL(BUILD_DATE)); 
-    ver->NewTag("MEMORY_BITS", new DIntGDL( sizeof(BaseGDL*)*8)); 
-    ver->NewTag("FILE_OFFSET_BITS", new DIntGDL( sizeof(SizeT)*8)); 
+    ver->NewTag("BUILD_DATE", new DStringGDL(BUILD_DATE));
+    ver->NewTag("MEMORY_BITS", new DIntGDL( sizeof(BaseGDL*)*8));
+    ver->NewTag("FILE_OFFSET_BITS", new DIntGDL( sizeof(SizeT)*8));
     DVar *v            = new DVar( "VERSION", ver);
     vIx                = sysVarList.size();
     sysVarList.push_back(v);
     sysVarRdOnlyList.push_back(v);
-    
+
     // !Mouse
     DStructGDL*  MouseData = new DStructGDL( "!MOUSE");
     MouseData->NewTag("X", new DLongGDL( 0));
@@ -768,14 +783,14 @@ namespace SysVar
 
     // !ERROR_STATE
     DStructGDL*  eStateData = new DStructGDL( "!ERROR_STATE");
-    eStateData->NewTag("NAME", new DStringGDL( "IDL_M_SUCCESS")); 
-    eStateData->NewTag("BLOCK", new DStringGDL( "IDL_MBLK_CORE")); 
-    eStateData->NewTag("CODE", new DLongGDL( 0)); 
+    eStateData->NewTag("NAME", new DStringGDL( "IDL_M_SUCCESS"));
+    eStateData->NewTag("BLOCK", new DStringGDL( "IDL_MBLK_CORE"));
+    eStateData->NewTag("CODE", new DLongGDL( 0));
     eStateData->NewTag("SYS_CODE", new DLongGDL( dimension( &dim2,one))); //idl 8
-    eStateData->NewTag("SYS_CODE_TYPE", new DStringGDL( "")); 
-    eStateData->NewTag("MSG", new DStringGDL( "")); 
-    eStateData->NewTag("SYS_MSG", new DStringGDL( "")); 
-    eStateData->NewTag("MSG_PREFIX", new DStringGDL( "% ")); 
+    eStateData->NewTag("SYS_CODE_TYPE", new DStringGDL( ""));
+    eStateData->NewTag("MSG", new DStringGDL( ""));
+    eStateData->NewTag("SYS_MSG", new DStringGDL( ""));
+    eStateData->NewTag("MSG_PREFIX", new DStringGDL( "% "));
     DVar *eState       = new DVar( "ERROR_STATE", eStateData);
     errorStateIx       = sysVarList.size();
     sysVarList.push_back(eState);
@@ -944,12 +959,10 @@ namespace SysVar
     dirIx=sysVarList.size();
     sysVarList.push_back( dir);
 
-    // !GSHHS_DATA_DIR 
-    string tmpDir=GetEnvString("GSHHS_DATA_DIR");
-    if( tmpDir == "") tmpDir = string(GDLDATADIR) + "/../gshhs/";
-    //    cout << "1 GSHHS data dir : " << tmpDir << endl;
-    // is the path a true path ?
-    char *symlinkpath =const_cast<char*> (tmpDir.c_str());
+    // !GDL_MAPS_DIR 
+    string tmpDir=GetEnvString("GDL_MAPS_DIR");
+    if( tmpDir == "") tmpDir = string(GDLDATADIR) + "/resource/maps";
+    char *symlinkpath =const_cast<char*> (tmpDir.c_str());// is the path a true path ?
 
 #ifdef _MSC_VER
 	#define PATH_MAX MAX_PATH
@@ -962,11 +975,9 @@ namespace SysVar
     char *ptr;
     ptr = realpath(symlinkpath, actualpath);
     if( ptr != NULL ) tmpDir=string(ptr)+lib::PathSeparator(); else tmpDir="";
-    //cout << "2 GSHHS data dir : " << tmpDir << endl;
-    DStringGDL *GshhsDataDir =  new DStringGDL( tmpDir);
-    DVar *GshhsDir = new DVar("GSHHS_DATA_DIR", GshhsDataDir);
-    GshhsDirIx=sysVarList.size();
-    sysVarList.push_back(GshhsDir);
+    DStringGDL *GdlMapsDataDir =  new DStringGDL( tmpDir);
+    DVar *GdlMapsDir = new DVar("GDL_MAPS_DIR", GdlMapsDataDir);
+    sysVarList.push_back(GdlMapsDir);
    
     // !STIME
     DStringGDL *stimeData = new DStringGDL( "");

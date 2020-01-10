@@ -46,8 +46,9 @@ namespace lib {
 
   using namespace std;
 
-  static std::map<long, DPtr> heapIndexMap;
-  static long heapIndex;
+  static std::map<long, DPtr> heapIndexMapSave; //list of [heap index , heap pointer] used when saving.
+  static std::map<long, std::pair<BaseGDL*,DPtr>> heapIndexMapRestore; //list of [heap index , [variable,heap pointer]] used when reading.
+  static long heapIndexSave;
   static std::vector<std::string> predeflist;
   static char* saveFileAuthor;
   static char* saveFileDatestring;
@@ -249,37 +250,57 @@ namespace lib {
     uint32_t next=updateNewRecordHeader(xdrs, cur);
     return next;
   }
+  
+  dimension* getArrDesc64(XDR* xdrs) {
+    int64_t UnknownLong;
+    if (!xdr_int64_t(xdrs, &UnknownLong)) return NULL;
+    int64_t nbytes;
+    if (!xdr_int64_t(xdrs, &nbytes)) return NULL;
+    int64_t nEl;
+    if (!xdr_int64_t(xdrs, &nEl)) return NULL;
+    int32_t nDims;
+    if (!xdr_int32_t(xdrs, &nDims)) return NULL; //on 32 bits
+    if (!xdr_int64_t(xdrs, &UnknownLong)) return NULL; //ignored as we ignore the 2x32 bits integers in the other version.
+    //cerr << "nbytes:" << nbytes << " ,nEl:" << nEl << ", nDims:" << nDims<<" ";
+    int64_t dims[8];
+    if (!xdr_vector(xdrs, (char*) dims, 8, sizeof (int64_t), (xdrproc_t) xdr_int64_t)) return NULL;
+    SizeT k = dims[0];
+    dimension* theDim = new dimension(k);
+    for (int i = 1; i < 8; ++i)
+    {
+      k = dims[i];
+      *theDim << k;
+    }
+    theDim->Purge();
+    cerr<<*theDim<<endl;
+    return theDim;
+  }
 
   dimension* getArrDesc(XDR* xdrs) {
     int32_t arrstart;
     int32_t UnknownLong;
     if (!xdr_int32_t(xdrs, &arrstart)) return NULL;
-    if (arrstart != 8)
+    if (arrstart != 8 && arrstart !=18) //'10'o and '22'o
     {
       cerr << "array is not a array! abort." << endl;
       return 0;
     }
+    if (arrstart == 18) return getArrDesc64(xdrs); //as the rest is specially coded on 8 bytes.
+    
     if (!xdr_int32_t(xdrs, &UnknownLong)) return NULL;
-    ;
     int32_t nbytes;
     if (!xdr_int32_t(xdrs, &nbytes)) return NULL;
-    ;
     int32_t nEl;
     if (!xdr_int32_t(xdrs, &nEl)) return NULL;
-    ;
     int32_t nDims;
     if (!xdr_int32_t(xdrs, &nDims)) return NULL;
-    ;
     if (!xdr_int32_t(xdrs, &UnknownLong)) return NULL;
     if (!xdr_int32_t(xdrs, &UnknownLong)) return NULL;
-    ;
     int32_t nmax;
     if (!xdr_int32_t(xdrs, &nmax)) return NULL;
-    ;
     //    cerr << "nbytes:" << nbytes << " ,nEl:" << nEl << ", nDims:" << nDims<<" ";
     int32_t dims[nmax];
     if (!xdr_vector(xdrs, (char*) dims, nmax, sizeof (int32_t), (xdrproc_t) xdr_int32_t)) return NULL;
-    ;
     SizeT k = dims[0];
     dimension* theDim = new dimension(k);
     for (int i = 1; i < nmax; ++i)
@@ -292,7 +313,31 @@ namespace lib {
     return theDim;
   }
 
-  void writeArrDesc(XDR* xdrs, BaseGDL* var) {
+  void writeArrDesc64(XDR* xdrs, BaseGDL* var) {
+    int32_t arrstart=18;
+    xdr_int32_t(xdrs, &arrstart);
+    //very important:
+    int64_t typeLength=sizeOfType[var->Type()];if (var->Type()==GDL_STRING) typeLength=(var->NBytes()/var->N_Elements())-1;
+    xdr_int64_t(xdrs, &typeLength);
+    int64_t nbytes=var->NBytes();
+    xdr_int64_t(xdrs, &nbytes);
+    int64_t nEl=var->N_Elements();
+    xdr_int64_t(xdrs, &nEl);
+    int32_t nDims=var->Rank();
+    xdr_int32_t(xdrs, &nDims);
+    int32_t UnknownLong=0;
+    xdr_int32_t(xdrs, &UnknownLong);
+    xdr_int32_t(xdrs, &UnknownLong);
+    int32_t nmax=8;
+    // not written xdr_int32_t(xdrs, &nmax);
+    int64_t dims[nmax];
+    int i=0;
+    for (; i < nDims; ++i) dims[i]=var->Dim(i);
+    for (; i < nmax; ++i) dims[i]=1; //yes.
+    xdr_vector(xdrs, (char*) dims, nmax, sizeof (int64_t), (xdrproc_t) xdr_int64_t);
+  }
+
+  void writeArrDesc32(XDR* xdrs, BaseGDL* var) {
     int32_t arrstart=8;
     xdr_int32_t(xdrs, &arrstart);
     //very important:
@@ -314,6 +359,13 @@ namespace lib {
     for (; i < nDims; ++i) dims[i]=var->Dim(i);
     for (; i < nmax; ++i) dims[i]=1; //yes.
     xdr_vector(xdrs, (char*) dims, nmax, sizeof (int32_t), (xdrproc_t) xdr_int32_t);
+  }
+  
+  void writeArrDesc(XDR* xdrs, BaseGDL* var) {
+    //very important check total size and switch if size is >2GO
+    SizeT typeLength=sizeOfType[var->Type()];if (var->Type()==GDL_STRING) typeLength=(var->NBytes()/var->N_Elements())-1;
+    SizeT nEl=var->N_Elements();
+    if (nEl*typeLength > 2000000000ULL) writeArrDesc64(xdrs,var); else writeArrDesc32(xdrs,var);
   }
   
   int defineCommonBlock(EnvT* e, XDR* xdrs, int verboselevel) {
@@ -984,8 +1036,8 @@ namespace lib {
         for (SizeT ix = 0; ix < nEl; ++ix) xdr_int32_t(xdrs, &(heapNumber[ix]));
         for (SizeT ix = 0; ix < nEl; ++ix)
         {
-          DPtr heapptr = heapIndexMap.find(heapNumber[ix])->second;
-          (*ptr)[ix] = heapptr;
+          DPtr heapptr = heapIndexMapRestore.find(heapNumber[ix])->second.second;
+           (*ptr)[ix] = heapptr;
         }
         break;
       }
@@ -996,8 +1048,8 @@ namespace lib {
         for (SizeT ix = 0; ix < nEl; ++ix) xdr_int32_t(xdrs, &(heapNumber[ix]));
         for (SizeT ix = 0; ix < nEl; ++ix)
         {
-          DObj heapptr = heapIndexMap.find(heapNumber[ix])->second;
-          (*ptr)[ix] = heapptr;
+          DObj heapptr = heapIndexMapRestore.find(heapNumber[ix])->second.second;
+            (*ptr)[ix] = heapptr;
         }
         break;
       }
@@ -1388,7 +1440,7 @@ namespace lib {
     bool hasDescription = e->KeywordPresent(DESCRIPTION);
 
     //empty heap map by security.
-    heapIndexMap.clear();
+    heapIndexMapRestore.clear();
 
     std::vector<Guard<BaseGDL>* > guardVector;
     //    std::vector<BaseGDL*> myObj;
@@ -1571,7 +1623,7 @@ namespace lib {
 
           break;
         }
-        case 16: //HEAP_DATA
+        case 16: //define all HEAP_DATA variable but do not fill them yet
           if (isCompress) xdrs = uncompress_trick(fid, xdrsmem, expanded, nextptr, currentptr);
         {
           int32_t heap_index = 0;
@@ -1599,16 +1651,14 @@ namespace lib {
 
           }
 
-          fillVariableData(xdrs, ret);
-          Guard<BaseGDL>* guard = new Guard<BaseGDL>;
-          guard->Reset(ret);
-          guardVector.push_back(guard);
-          //allocate corresponding heap entries and store in saveFileHeapMap:
-          //if ret is a struct defining an object, put in ObjHeap.
+          //allocate corresponding heap entries and store gdl variable and heap entry in heapIndexMapRestore:
+          //if ret is a struct defining an object, use ObjHeap.
           DPtr ptr;
           if (isObjStruct) ptr = e->NewObjHeap(1, static_cast<DStructGDL*>(ret));
           else ptr = e->NewHeap(1, ret);
-          heapIndexMap.insert(std::pair<long, DPtr>(heap_index, ptr));
+          heapIndexMapRestore.insert(std::pair<long, std::pair<BaseGDL*,DPtr>>(heap_index, std::make_pair(ret,ptr)));
+          //we skip filling the gdl variable, as we wait until all heap variables in heapIndexMapRestore are copmletely defined.
+          //This has proven to be way safer as the order of variables in the save file is strange.
         }
           break;
         default:
@@ -1712,7 +1762,29 @@ namespace lib {
           guardVector.push_back(guard);
         }
           break;
-        default:
+      case 16: //HEAP_DATA: use previous variable, now that the list of heap pointers is complete.
+          if (isCompress) xdrs = uncompress_trick(fid, xdrsmem, expanded, nextptr, currentptr);
+        {
+          int32_t heap_index = 0;
+          if (!xdr_int32_t(xdrs, &heap_index)) break;
+          int32_t heap_unknown = 0;
+          if (!xdr_int32_t(xdrs, &heap_unknown)) break; // start of TYPEDESC
+          bool isObjStruct=false;
+          BaseGDL* dummy = getVariable(e, xdrs, isSysVar, isObjStruct); //obliged to read all that infortunately.
+          // we are at varstat=7 since this has already been seen above
+          int32_t varstart = 0;
+          if (!xdr_int32_t(xdrs, &varstart)) break;
+          GDLDelete(dummy); //get rid of variable that may have wrong pointers and restore the good one:
+          if (heapIndexMapRestore.find(heap_index) == heapIndexMapRestore.end()) {
+            e->Throw("Lost track in HEAP VARIABLE definition at offset " + i2s(nextptr));
+          } else {
+            if (debug) std::cerr<<"success restore Heap var"<<std::endl;
+            BaseGDL* ret = heapIndexMapRestore.find(heap_index)->second.first;
+            fillVariableData(xdrs, ret);
+          }
+        }
+          break;
+      default:
           break;
       }
     }
@@ -1764,7 +1836,7 @@ namespace lib {
         DPtr subptr = (*static_cast<DPtrGDL*> (var))[ielem];
         if (subptr)
         {
-          heapIndexMap.insert(std::pair<long, DPtr>(++heapIndex, subptr));
+          heapIndexMapSave.insert(std::pair<long, DPtr>(++heapIndexSave, subptr));
           BaseGDL* v = e->GetHeap(subptr);
           if (v) addToHeapList(e, v);
         }
@@ -1777,7 +1849,7 @@ namespace lib {
         DObj subptr = (*static_cast<DObjGDL*> (var))[ielem];
         if (subptr)
         {
-          heapIndexMap.insert(std::pair<long, DPtr>(-1*(++heapIndex), subptr));
+          heapIndexMapSave.insert(std::pair<long, DPtr>(-1*(++heapIndexSave), subptr));
           BaseGDL* v = e->GetObjHeap(subptr);
           if (v) addToHeapList(e, v);
         }
@@ -1801,7 +1873,7 @@ namespace lib {
                 DPtr subptr = (*static_cast<DPtrGDL*> (subvar))[i];
                 if (subptr)
                 {
-                  heapIndexMap.insert(std::pair<long, DPtr>(++heapIndex, subptr));
+                  heapIndexMapSave.insert(std::pair<long, DPtr>(++heapIndexSave, subptr));
                   BaseGDL* v = e->GetHeap(subptr);
                   if (v) addToHeapList(e, v);
                 }
@@ -1813,7 +1885,7 @@ namespace lib {
                 DObj subptr = (*static_cast<DObjGDL*> (subvar))[i];
                 if (subptr)
                 {
-                  heapIndexMap.insert(std::pair<long, DPtr>(-1*(++heapIndex), subptr));
+                  heapIndexMapSave.insert(std::pair<long, DPtr>(-1*(++heapIndexSave), subptr));
                   BaseGDL* v = e->GetObjHeap(subptr);
                   if (v) addToHeapList(e, v);
                 }
@@ -1829,14 +1901,14 @@ namespace lib {
   }
 
   uint32_t writeHeapList(XDR* xdrs) {
-    int32_t elementcount = heapIndexMap.size();
+    int32_t elementcount = heapIndexMapSave.size();
     if (elementcount < 1) return xdr_getpos(xdrs);
     uint32_t cur = writeNewRecordHeader(xdrs, 15); //HEAP_HEADER
     xdr_int32_t(xdrs, &elementcount);
     int32_t indices[elementcount];
     std::map<long,DPtr>::iterator itheap;
     SizeT i = 0;
-    for (itheap = heapIndexMap.begin(); itheap != heapIndexMap.end(); ++itheap) indices[i++] = 
+    for (itheap = heapIndexMapSave.begin(); itheap != heapIndexMapSave.end(); ++itheap) indices[i++] = 
       ((*itheap).first>0)?(*itheap).first:-1*(*itheap).first;
     xdr_vector(xdrs, (char*) indices, elementcount, sizeof (int32_t), (xdrproc_t) xdr_int32_t);
 //    {
@@ -1887,8 +1959,8 @@ namespace lib {
     //if testSafety is correct, DLong and int32_t , DInt and int16_t etc have the same meaning.
   
     //empty maps by security.
-    heapIndexMap.clear();
-    heapIndex=0;
+    heapIndexMapSave.clear();
+    heapIndexSave=0;
     predeflist.clear();
     
     bool debug; //unused
@@ -2108,7 +2180,7 @@ namespace lib {
     //VERSION
     nextptr=writeVersion(xdrs, &format, (char*)arch.c_str(), (char*) os.c_str() , (char*) release.c_str());
     //HEAPLIST
-    if (heapIndexMap.size() > 0) nextptr=writeHeapList(xdrs);
+    if (heapIndexMapSave.size() > 0) nextptr=writeHeapList(xdrs);
     // promote64: NO!
 //    //notice:
 //    std::string notice="Made by GDL, a free software program that you can redistribute and/or modify"
@@ -2124,7 +2196,7 @@ namespace lib {
     }
     //HEAP Variables: all terminal variables
     std::map<long, DPtr>::iterator itheap;
-    for (itheap=heapIndexMap.begin(); itheap!=heapIndexMap.end(); ++itheap) {      
+    for (itheap=heapIndexMapSave.begin(); itheap!=heapIndexMapSave.end(); ++itheap) {      
       nextptr=writeHeapVariable(e, xdrs, *itheap);
     }
     while (!systemReadonlyVariableVector.empty())

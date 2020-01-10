@@ -27,22 +27,23 @@ array2d=REPLICATE(1d,[3,3])
 arraynotreally2d=REFORM(REPLICATE(1d,9),[9,1]); is equivalent to a 1-dim array
 ;
 res=EXECUTE('array1d[0,0]=arraynotreally2d')
-if ~res then ADD_ERROR, nb_errors, 'bad assigantion [0,0] not really 2D'
+if ~res then ERRORS_ADD, nb_errors, 'bad assigantion [0,0] not really 2D'
 ;
 ; this one should never work !
 ;
-;res=EXECUTE('array1d[0,0]=array2d')
-;if ~res then ADD_ERROR, nb_errors, 'bad assigantion [0,0]'
+print, 'The following message is OK'
+res=EXECUTE('array1d[0,0]=array2d')
+if res then ERRORS_ADD, nb_errors, 'bad assigantion [0,0]'
 ;
 res=EXECUTE('array1d[1,0,0]=array1d[1:8]')
-if ~res then ADD_ERROR, nb_errors, 'bad assigantion [1,0,0]'
+if ~res then ERRORS_ADD, nb_errors, 'bad assigantion [1,0,0]'
 
 res=EXECUTE('array1d[0]=arraynotreally2d')
-if ~res then ADD_ERROR, nb_errors, 'bad assigantion [0]'
+if ~res then ERRORS_ADD, nb_errors, 'bad assigantion [0]'
 ;
 ; -----------
 ;
-BANNER_FOR_TESTSUITE, 'TEST_BUG_675', nb_errors, /short
+BANNER_FOR_TESTSUITE, 'TEST_BUG_675', nb_errors, /status
 ERRORS_CUMUL, cumul_errors, nb_errors
 if KEYWORD_SET(test) then STOP
 ;
@@ -75,6 +76,38 @@ return, input
 ;
 end
 ;
+pro TEST_SIZE_HASH, cumul_errors, dims=dims, verbose=verbose, $
+                     help=help, test=test, debug=debug
+h = hash('a',1,'b',2,'c',3)
+count = h.count()
+nel = size(h, /N_elements)
+szchk = [1, nel, 11, nel]
+if (nel ne count) or ~array_equal(szchk, size(h)) then $
+    ERRORS_ADD, cumul_errors,' size(<hash>)  wrong'
+strucobj = size(h,/struct)
+if(strucobj.n_elements ne count ) then $
+    ERRORS_ADD, cumul_errors,' size(object array)  wrong'
+
+if keyword_set(test) then stop,' at end of test_size_hash'
+return
+end
+;
+pro TEST_SIZE_LIST, cumul_errors, dims=dims, verbose=verbose, $
+                     help=help, test=test, debug=debug
+h = list('a',1,'b',2,'c',3)
+count = h.count()
+nel = size(h, /N_elements)
+szchk = [1, nel, 11, nel]
+if (nel ne count) or ~array_equal(szchk, size(h)) then $
+    ERRORS_ADD, cumul_errors,' size(<list>)  wrong'
+strucobj = size(h,/struct)
+if(strucobj.n_elements ne count ) then $
+    ERRORS_ADD, cumul_errors,' size(object array)  wrong'
+
+if keyword_set(test) then stop,' at end of test_size_list'
+return
+end
+;
 pro TEST_SIZE_ARRAY, cumul_errors, dims=dims, verbose=verbose, $
                      help=help, test=test, debug=debug
 ;
@@ -95,7 +128,7 @@ for ii=0, N_ELEMENTS(dims)-1 do begin
    size_expected=[N_ELEMENTS(clean_dims),clean_dims,type,PRODUCT(clean_dims,/pre)]
    ;;
    if ~ARRAY_EQUAL(size_effective,size_expected) then begin
-      ADD_ERROR, nb_errors, 'bad SIZE for case :'+ii
+      ERRORS_ADD, nb_errors, 'bad SIZE for case :'+ii
       print, 'current dims :', current_dims
       print, 'correct (clean) dims :', clean_dims
    endif
@@ -107,7 +140,7 @@ for ii=0, N_ELEMENTS(dims)-1 do begin
    endif
 endfor
 ;
-BANNER_FOR_TESTSUITE, 'TEST_SIZE_ARRAY', nb_errors, /short
+BANNER_FOR_TESTSUITE, 'TEST_SIZE_ARRAY', nb_errors, /status
 ERRORS_CUMUL, cumul_errors, nb_errors
 if KEYWORD_SET(test) then STOP
 ;
@@ -134,6 +167,10 @@ TEST_SIZE_ARRAY, nb_errors, verbose=verbose
 TEST_SIZE_ARRAY, nb_errors, dims=[1,1,1,1,1], verbose=verbose
 TEST_SIZE_ARRAY, nb_errors, dims=[1,10,1,10,1], verbose=verbose
 ;
+TEST_SIZE_HASH, nb_errors, verbose=verbose, $
+               help=help, test=test, debug=debug
+TEST_SIZE_LIST, nb_errors,  verbose=verbose, $
+               help=help, test=test, debug=debug
 ; ----------------- final message ----------
 ;
 BANNER_FOR_TESTSUITE, 'TEST_SIZE', nb_errors

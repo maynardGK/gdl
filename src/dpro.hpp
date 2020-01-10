@@ -31,7 +31,11 @@
 #include "str.hpp"
 
 #include <antlr/Token.hpp>
-
+#ifdef _WIN32
+    namespace lib {
+      extern bool posixpaths;
+    }
+#endif
 template<typename T>  class Is_eq: public std::unary_function<T,bool>
 {
   std::string name;
@@ -350,6 +354,24 @@ public:
 
   std::string GetFilename()
   {
+#ifdef _WIN32
+    if (lib::posixpaths) {
+        std::string name;
+        name = file;
+        char* ptr = (char *) name.c_str();
+        for(size_t i=0;ptr[i] != 0;i++) if(ptr[i] == '\\') ptr[i] = '/';
+        return name;
+    }
+/*  does not work !! (??)
+     if (lib::posixpaths) for(;;)
+    {
+      size_t pp;  // This is to make path names uniform w.r.t. Unix
+                //           and compliant with posix shell.
+        pp=name.find( "\\",pp);
+        if (pp==std::string::npos) break;
+        name[pp]='/';
+      } */
+#endif
     return file;
   }
 
@@ -362,7 +384,7 @@ public:
 
    void Resize( SizeT s) { var.resize( s);}
   SizeT Size() {return var.size();}
-  SizeT CommonsSize() {
+  SizeT CommonsSize() { //number of elements in ALL commons known by this DSubUD.
    SizeT commonsize=0;
    CommonBaseListT::iterator c = common.begin();
    for(; c != common.end(); ++c) commonsize+=(*c)->NVar();
@@ -384,14 +406,16 @@ public:
   }
 
   // returns common block with name n
-  DCommon* Common(const std::string& n)
-  {
-    CommonBaseListT::iterator c = common.begin();
-    for(; c != common.end(); ++c)
-      if( dynamic_cast< DCommon*>( *c) != NULL && (*c)->Name() == n)
-	return static_cast< DCommon*>( *c);
-    return NULL;
+
+ DCommon* Common(const std::string& n) {
+  CommonBaseListT::iterator c = common.begin();
+  for (; c != common.end(); ++c) {
+   if ((*c)->Name() == n) {
+    return (*c)->getCommon();
+   }
   }
+  return NULL;
+ }
 
   // returns common block which holds variable n
   DCommonBase* FindCommon(const std::string& n)

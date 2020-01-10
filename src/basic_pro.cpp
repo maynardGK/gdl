@@ -59,10 +59,10 @@ static bool trace_me(false);
 namespace lib {
 
   using namespace std;
-	DString GetCWD(); // From file.cpp
-  // control !CPU settings
+  DString GetCWD(); // From file.cpp
 
-  void cpu(EnvT* e) {
+  // control !CPU settings
+  void cpu_pro(EnvT* e) {
     static int resetIx = e->KeywordIx("RESET");
     static int restoreIx = e->KeywordIx("RESTORE");
     static int max_eltsIx = e->KeywordIx("TPOOL_MAX_ELTS");
@@ -143,6 +143,50 @@ namespace lib {
 #endif
   }
 
+  // control !GDL settings
+  void gdl_config_pro(EnvT* e) {
+    
+    static int wxIx = e->KeywordIx("GDL_USE_WX");
+    static int dsfmtIx = e->KeywordIx("GDL_NO_DSFMT");
+    static int mapqualityIx = e->KeywordIx("MAP_QUALITY");
+    bool setWX = e->KeywordSet(wxIx);
+    bool setDSFMT = e->KeywordSet(dsfmtIx);
+    bool setMapQual = e->KeywordSet(mapqualityIx);
+
+    if (setDSFMT) {
+      DByteGDL* no_dsfmt= e->GetKWAs<DByteGDL>(dsfmtIx);
+      //e->AssureScalarKW<DByteGDL>(dsfmtIx, no_dsfmt);
+      //      cout << (int)no_dsfmt << endl;
+      DStructGDL* gdlconfig = SysVar::GDLconfig();
+      static unsigned  NoDSFMTTag= gdlconfig->Desc()->TagIndex("GDL_NO_DSFMT");
+      (*static_cast<DByteGDL*> (gdlconfig->GetTag(NoDSFMTTag, 0)))[0]=(*no_dsfmt)[0];
+    }
+    
+    if (setMapQual) {
+      DString mapname;
+      e->AssureStringScalarKW(mapqualityIx, mapname);
+      cout << mapname.c_str() << endl;
+      StrUpCaseInplace(mapname);
+      
+      // list of possible values ...
+      vector <string> map_quality;
+      map_quality.push_back("CRUDE"); 
+      map_quality.push_back("LOW"); 
+      map_quality.push_back("INTERMEDIATE"); 
+      map_quality.push_back("HIGH"); 
+      map_quality.push_back("FULL"); 
+
+      for (int i=0; i<map_quality.size(); i++) {
+	if (mapname.compare(map_quality[i]) == 0) {
+	  DStructGDL* gdlconfig = SysVar::GDLconfig();
+	  static unsigned MapQualityTag = gdlconfig->Desc()->TagIndex("MAP_QUALITY");
+	  (*static_cast<DStringGDL*> (gdlconfig->GetTag(MapQualityTag, 0)))[0] =mapname;
+	  break;
+	}
+      }
+    }
+  }
+  
   void exitgdl(EnvT* e) {
 
 #if defined(HAVE_LIBREADLINE) || defined(HAVE_LIBEDITLINE)
@@ -155,6 +199,9 @@ namespace lib {
       // Create eventually the ".gdl" path in user $HOME
       int result, debug = 0;
       char *homeDir = getenv("HOME");
+	  
+	  if( homeDir == NULL) homeDir = getenv("HOMEPATH"); 
+	  
       if (homeDir != NULL) {
         string pathToGDL_history = homeDir;
         AppendIfNeeded(pathToGDL_history, "/");
@@ -2003,7 +2050,7 @@ static DWORD launch_cmd(BOOL hide, BOOL nowait,
         fileUnits[unit_lun - 1].set_readbuf_bsrb_destroy_on_close(bsrb_old_p);
         fileUnits[unit_lun - 1].set_fd_close_on_close(coutP[0]);
 #else
-        e->Throw("UNIT kw. relies on GNU extensions to the std C++ library (that were not availble during compilation?)");
+        e->Throw("UNIT kw. relies on GNU extensions to the std C++ library (that were not available during compilation?)");
 #endif
 
       } else {
@@ -2148,7 +2195,9 @@ static DWORD launch_cmd(BOOL hide, BOOL nowait,
           ixList.push_back(new CArrayIndexScalar((*p3)[i])); //p3->NewIx(i)));
       ArrayIndexListT* ixL;
       MakeArrayIndex(&ixList, &ixL);
-      Guard< ArrayIndexListT> ixL_guard(ixL);
+              //Keeping the following Guard makes lots of problems when the Evt* associate to the call to this libarry is destroyed.
+              //To be investigated further (I'm stymied), see #574.
+//      Guard< ArrayIndexListT> ixL_guard(ixL);
       ixL->AssignAt(p0, p1);
       return;
     }
@@ -2192,8 +2241,11 @@ static DWORD launch_cmd(BOOL hide, BOOL nowait,
       AppendIfNeeded(proFile, ".pro");
 
       bool found = CompleteFileName(proFile);
-      if (!found )
-        if (!quiet) e->Throw("Not found: " + proFile); else return;
+      if (!found ) {
+        if (!quiet)
+          e->Throw("Not found: " + proFile);
+        else return;
+      }
 
       // file already opened?
       bool open = false;
@@ -2494,7 +2546,7 @@ void delvar_pro( EnvT* e)
 			if(trace_me) std::cout << std::endl;
 		}
 	if(delcommon.empty()) return;
-	unsigned cIx;
+	int cIx;
 	int ncmnfound=0;
 	std::vector<DCommonBase*> c;
 	DSubUD* proUD   = dynamic_cast<DSubUD*>(caller->GetPro());

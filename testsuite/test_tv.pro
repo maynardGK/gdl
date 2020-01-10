@@ -9,6 +9,7 @@
 ; are too slow)
 ; * AC 2017-08-17 : details when files missing, errors count, banner ...
 ; * AC 2018-01-09 : clarifying details, should extendable easily for bench
+; * AC 2018-10-24 : should work now with X11, Win & Mac ...
 ;
 function TITLE4TEST_TV, data, debug=debug
 ;
@@ -103,13 +104,16 @@ TV, image, 0
 ;
 ; reading contents of the 2 windows : should have the same
 ;
-content_win2=TVRD()
-;
-WSET, 0
-content_win0=TVRD()
-;
-local_error=0
-if ~ARRAY_EQUAL(content_win0,content_win2) then local_error++
+    local_error=0
+if !version.os_family ne 'Windows' then begin
+    content_win2=TVRD()
+    ;
+    WSET, 0
+    content_win0=TVRD()
+    ;
+    if ~ARRAY_EQUAL(content_win0,content_win2) then local_error++
+endif else $
+  message,/continue,' TVRD() bypassed for windows machines'
 ;
 ERRORS_CUMUL, cumul_errors, local_error
 ;
@@ -238,7 +242,7 @@ end
 ;
 pro TEST_TV_REFORM
 ;
-DEVICE, /decomposed
+DEVICE, decomposed=0
 ;
 xdim=350
 ydim=100
@@ -251,13 +255,17 @@ b1=REFORM(a,1, xdim, ydim)
 b2=REFORM(a,xdim, 1, ydim)
 b3=REFORM(a,xdim, ydim, 1)
 ;
-MY_WINDOW, 0, a
-MY_WINDOW, 1, b1
-MY_WINDOW, 2, REFORM(b1)
-MY_WINDOW, 3, b2
-MY_WINDOW, 4, REFORM(b2)
-MY_WINDOW, 5, b3
-MY_WINDOW, 6, REFORM(b3)
+
+icolor=0 & loadct,icolor,/silent 
+MY_WINDOW, 0, a  & loadct,++icolor,/silent 
+MY_WINDOW, 1, b1 & loadct,++icolor,/silent 
+MY_WINDOW, 2, REFORM(b1) & loadct,++icolor,/silent 
+MY_WINDOW, 3, b2 & loadct,++icolor,/silent 
+MY_WINDOW, 4, REFORM(b2) & loadct,++icolor,/silent 
+MY_WINDOW, 5, b3 & loadct,++icolor,/silent 
+MY_WINDOW, 6, REFORM(b3) 
+loadct,0,/silent 
+device,decomposed=1
 ;
 BANNER_FOR_TESTSUITE, "TEST_TV_REFORM", 0, /SHORT
 ;
@@ -265,18 +273,17 @@ end
 ;
 ; -------------------------------------
 ;
-pro TEST_TV, help=help, no_close=no_close, test=test, no_exit=no_exit
+pro TEST_TV, help=help, test=test, no_exit=no_exit
 ;
 if KEYWORD_SET(help) then begin
-    print, 'pro TEST_TV, help=help, no_close=no_close, test=test, no_exit=no_exit'
+    print, 'pro TEST_TV, help=help, test=test, no_exit=no_exit'
     return
 endif
 ;
-if (!d.name EQ 'NULL') then begin
-   is_X11_ok=EXECUTE('set_plot, "X"')
-   if (is_X11_ok EQ 0) then begin
-      if ~KEYWORD_SET(no_exit) then EXIT, status=77 else STOP
-   endif
+rname=ROUTINE_NAME()
+;
+if ~CHECK_IF_DEVICE_IS_OK(rname, /force) then begin
+   if ~KEYWORD_SET(no_exit) then EXIT, status=77 else STOP
 endif
 ;
 TEST_TV_REFORM
@@ -287,11 +294,12 @@ TEST_TV_DAMIER, 9, /COLOR
 TEST_TV_OVER_BOX
 ;
 ; only this test gives a feedback now
-TEST_TV_WSET, errors
+errors=0
+if !version.os_family ne 'Windows' then TEST_TV_WSET, errors
 ;
 ;stop
-if ~KEYWORD_SET(noclose) then while !d.window GE 0 do WDELETE
-print, 'You can use keyword /No_Close to de-activate auto closing'
+if ~KEYWORD_SET(no_exit) then while !d.window GE 0 do WDELETE
+print, 'You can use keyword /No_Exit to de-activate auto closing'
 ;
 ; ----------------- final message ----------
 ;

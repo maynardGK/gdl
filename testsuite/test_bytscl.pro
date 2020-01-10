@@ -15,12 +15,52 @@
 ; WARNING ! in idlwave 6.1, indentation problems !!
 ; ForEach/EndForEach loops indentation are not managed
 ;
-; ------------------------
+; WARNING ! 15-Sept-2018 : FL don't manage as IDL & GDL:
+; Fatal if top below 0, refuse to process on Complex.
 ;
-; AC 2017-03-13
+; ------------------------------------------------
+; Modifications history :
+;
+; * AC 2017-03-13 :
 ; testing the TOP keyword, no clear idea now ...
 ; how to solve the differences between IDL & GDL
 ;
+; * AC 2018-09-15 : after discutions & tests with Sylvain,
+; it is now clear that, in IDL, BYTSCL() does not work "well"
+; on complex input. But usually IDL enforces a simple rule :
+; applying the operation on the REAL part. Not here, eg :
+; (tested on IDL 7.0, 7.1, 8.2, 8.4, 8.5, 8.7)
+; We wrote a simple code to see it directly (pro TEST_BYTSCL_DIFF_GDL_IDL)
+;
+; ------------------------------------------------
+;
+pro TEST_BYTSCL_DIFF_GDL_IDL
+;
+input=FINDGEN(10)
+input[5]=!values.f_nan
+input[6]=!values.f_infinity
+input=COMPLEX(input)
+;
+;print, format='(10f4.0)', input
+;print, input
+print, '1 Real Part Input     : ', format='(A,10f4.0)', REAL_PART(input)
+print, '2 BYTSCL(input)       : ', BYTSCL(input)
+print, '3 BYTSCL(input, /nan) : ', BYTSCL(input, /nan)
+;
+end
+;
+; in GDL : 
+;1 Real Part Input     :   0.  1.  2.  3.  4. NaN Inf  7.  8.  9.
+;2 BYTSCL(input)       :    0   0   0   0   0   0 255   0   0   0
+;3 BYTSCL(input, /nan) :    0  28  56  85 113   0   0 199 227 255
+;
+; in IDL : 
+;1 Real Part Input     :   0.  1.  2.  3.  4. NaN Inf  7.  8.  9.
+;2 BYTSCL(input)       :    0   0   0   0   0   0   0   0   0   0
+;3 BYTSCL(input, /nan) :    0  28  56  85   0   0 255 199 227 255
+;
+; ------------------------------------------------
+; 
 pro TEST_BYTSCL_TOP, cumul_errors, test=test, verbose=verbose
 ;
 nb_errors=0
@@ -40,20 +80,21 @@ for ii=0, N_ELEMENTS(top_list)-1 do begin
    ;;
    if ARRAY_EQUAL(expected, result) NE 1 then begin
       mess=', min/max : '+STRING(FIX(result[0]))+', '+STRING(FIX(result[1]))
-      ADD_ERROR, nb_errors, 'Pb with top= '+STRING(top_list[ii])+mess
+      ERRORS_ADD, nb_errors, 'Pb with top= '+STRING(top_list[ii])+mess
    endif
 endfor
 ;
-BANNER_FOR_TESTSUITE, 'TEST_BYTSCL_RAMPS', nb_errors, /short, verb=verbose
+; ----- final ----
 ;
+BANNER_FOR_TESTSUITE, 'TEST_BYTSCL_RAMPS', nb_errors, /status
 ERRORS_CUMUL, cumul_errors, nb_errors
-;
 if KEYWORD_SET(test) then STOP
 ;
 end
 ;
-; ------------------------
-;
+; ------------------------------------------------
+; basic tests on TYPE & value, without Nan or Inf
+; 
 pro TEST_BYTSCL_RAMPS, cumul_errors, test=test, verbose=verbose
 ;
 nb_errors=0
@@ -67,21 +108,21 @@ for itype=1, 15 do begin
          ramp=INDGEN(10, type=itype)
          resu=BYTSCL(ramp)
          if ARRAY_EQUAL(expected, resu) NE 1 then begin
-            ADD_ERROR, nb_errors, 'TYPE : '+STRING(itype)
+            ERRORS_ADD, nb_errors, 'TYPE : '+STRING(itype)
          endif
       endif
    endif
 endfor
 ;
-BANNER_FOR_TESTSUITE, 'TEST_BYTSCL_RAMPS', nb_errors, /short, verb=verbose
+; ----- final ----
 ;
+BANNER_FOR_TESTSUITE, 'TEST_BYTSCL_RAMPS', nb_errors, /status
 ERRORS_CUMUL, cumul_errors, nb_errors
-;
 if KEYWORD_SET(test) then STOP
 ;
 end
 ;
-; ------------------------
+; ------------------------------------------------
 ;
 pro TEST_BYTSCL_RAMPS_NAN, cumul_errors, test=test, verbose=verbose
 ;
@@ -109,25 +150,25 @@ FOREACH itype, no_int do begin
    ;; without /nan flag
    resu_nan=BYTSCL(ramp_nan_inf)
    if ARRAY_EQUAL(expected_nan, resu_nan) NE 1 then begin
-      ADD_ERROR, nb_errors, 'pb in TYPE : '+STRING(itype)
+      ERRORS_ADD, nb_errors, 'pb in TYPE : '+STRING(itype)
    endif
    ;; 
    ;; with /nan flag
    resu_nan_flag=BYTSCL(ramp_nan_inf,/nan)
    if ARRAY_EQUAL(expected_nan_flag, resu_nan_flag) NE 1 then begin
-      ADD_ERROR, nb_errors, 'pb in TYPE + /NAN flag: '+STRING(itype)
+      ERRORS_ADD, nb_errors, 'pb in TYPE + /NAN flag: '+STRING(itype)
    endif
 ENDFOREACH
 ;
-BANNER_FOR_TESTSUITE, 'TEST_BYTSCL_RAMPS_NAN', nb_errors, /short, verb=verbose
+; ----- final ----
 ;
+BANNER_FOR_TESTSUITE, 'TEST_BYTSCL_RAMPS_NAN', nb_errors, /status
 ERRORS_CUMUL, cumul_errors, nb_errors
-;
 if KEYWORD_SET(test) then STOP
 ;
 end
 ;
-; ------------------------
+; ------------------------------------------------
 ; convenience procedure used below
 pro TEST_BYTSCL_PRINT, input, expected, outpout
 print, 'Real Part Input    : ', REAL_PART(input)
@@ -187,43 +228,43 @@ FOREACH itype, no_int do begin
    endif
    ;;
    if ARRAY_EQUAL(BYTSCL(used_nan), exp_nan) NE 1 then begin
-      ADD_ERROR, nb_errors, 'pb in TYPE + NAN + no flag: '+STRING(itype)
+      ERRORS_ADD, nb_errors, 'pb in TYPE + NAN + no flag: '+STRING(itype)
       if debug then TEST_BYTSCL_PRINT, used_nan, exp_nan, BYTSCL(used_nan)
    endif
    if ARRAY_EQUAL(BYTSCL(used_inf), exp_inf) NE 1 then begin
-      ADD_ERROR, nb_errors, 'pb in TYPE + Inf + no flag: '+STRING(itype)
+      ERRORS_ADD, nb_errors, 'pb in TYPE + Inf + no flag: '+STRING(itype)
       if debug then TEST_BYTSCL_PRINT, used_inf, exp_inf, BYTSCL(used_inf)
    endif
    if ARRAY_EQUAL(BYTSCL(used_mix), exp_mix) NE 1 then begin
-      ADD_ERROR, nb_errors, 'pb in TYPE + MIX + no flag: '+STRING(itype)
+      ERRORS_ADD, nb_errors, 'pb in TYPE + MIX + no flag: '+STRING(itype)
       if debug then TEST_BYTSCL_PRINT, used_mix, exp_mix, BYTSCL(used_mix)
    endif
    ;;
    ;; with the /NAN flag on
    ;;
    if ARRAY_EQUAL(BYTSCL(used_nan, /NAN), exp_nan_flag) NE 1 then begin
-      ADD_ERROR, nb_errors, 'pb in TYPE + NAN + /NAN flag ON: '+STRING(itype)
+      ERRORS_ADD, nb_errors, 'pb in TYPE + NAN + /NAN flag ON: '+STRING(itype)
       if debug then TEST_BYTSCL_PRINT, used_nan, exp_nan_flag, BYTSCL(used_nan,/nan)
    endif
    if ARRAY_EQUAL(BYTSCL(used_inf, /NAN), exp_inf_flag) NE 1 then begin
-      ADD_ERROR, nb_errors, 'pb in TYPE + Inf + /NAN flag ON: '+STRING(itype)
+      ERRORS_ADD, nb_errors, 'pb in TYPE + Inf + /NAN flag ON: '+STRING(itype)
       if debug then TEST_BYTSCL_PRINT, used_inf, exp_inf_flag, BYTSCL(used_inf,/nan)
    endif
    if ARRAY_EQUAL(BYTSCL(used_mix, /NAN), exp_mix_flag) NE 1 then begin
-      ADD_ERROR, nb_errors, 'pb in TYPE + MIX + /NAN flag ON: '+STRING(itype)
+      ERRORS_ADD, nb_errors, 'pb in TYPE + MIX + /NAN flag ON: '+STRING(itype)
       if debug then TEST_BYTSCL_PRINT, used_mix, exp_mix_flag, BYTSCL(used_mix,/nan)
    endif
 ENDFOREACH
 ;
-BANNER_FOR_TESTSUITE, 'TEST_BYTSCL_IDL_PROBLEM', nb_errors, /short, verb=verbose
+; ----- final ----
 ;
+BANNER_FOR_TESTSUITE, 'TEST_BYTSCL_IDL_PROBLEM', nb_errors, /status
 ERRORS_CUMUL, cumul_errors, nb_errors
-;
 if KEYWORD_SET(test) then STOP
 ;
 end
 ;
-; ------------------------
+; ------------------------------------------------
 ;
 pro TEST_BYTSCL, help=help, verbose=verbose, no_exit=no_exit, test=test
 ;
@@ -245,6 +286,9 @@ TEST_BYTSCL_RAMPS_NAN, nb_errors, test=test
 ; This test is a clone of previous test, testing what is "expected"
 ; for types Float, Double, Complex and DComplex with NaN and Inf ...
 ; In IDL, the outputs for Complex and DComplex are not understanded.
+;
+; IDL don't pass this test for COMPLEX & DCOMPLEX
+; FL don't pass this test for COMPLEX & DCOMPLEX + top below zero
 ;
 TEST_BYTSCL_IDL_PROBLEM, nb_errors, test=test, verbose=verbose
 ;

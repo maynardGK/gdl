@@ -140,10 +140,10 @@ bool GraphicsDevice::ExistDevice( const string& device, int &index)
   for( int i=0; i<size; i++)
     {
       if( deviceList[ i]->Name() == device)
-	{
-	  index=i;
-	  return true;
-	}
+    {
+      index=i;
+      return true;
+    }
     }
   return false;
 }
@@ -154,13 +154,13 @@ bool GraphicsDevice::SetDevice( const string& device)
   for( int i=0; i<size; i++)
     {
       if( deviceList[ i]->Name() == device)
-	{
-	  actDevice=deviceList[ i];
-	  // update !D
-	  SysVar::SetD( actDevice->DStruct());
-	  
-	  return true;
-	}
+    {
+      actDevice=deviceList[ i];
+      // update !D
+      SysVar::SetD( actDevice->DStruct());
+      
+      return true;
+    }
     }
   return false;
 }
@@ -171,9 +171,9 @@ DStructGDL* GraphicsDevice::GetDeviceStruct( const string& device)
   for( int i=0; i<size; i++)
     {
       if( deviceList[ i]->Name() == device)
-	{
-	  return deviceList[ i]->DStruct();
-	}
+    {
+      return deviceList[ i]->DStruct();
+    }
     }
   return NULL;
 }
@@ -188,33 +188,25 @@ void GraphicsDevice::Init()
   deviceList.push_back( new DevicePS());
   deviceList.push_back( new DeviceSVG());
   deviceList.push_back( new DeviceZ());
-// Normally the following is to be used but for now
-// it will be commented out so that Travis tests pass.
-#ifdef HAVE_LIBWXWIDGETS
-	//GDLWidget::Init();        // initialize widget system.
-#endif
   
-  //if GDL_USE_WX, and has wxWidgets, the wxWidgets device becomes 'X' or 'WIN' depending on machine,
-  // no ther device is defined.
-  std::string useWX=StrUpCase(GetEnvString("GDL_USE_WX"));
-  if (useWX == "YES" ) {
 #ifdef HAVE_LIBWXWIDGETS
-	GDLWidget::Init();  // Hide this here from the OSX/CLang travis tests.
-	#ifdef NO_WIDGET_DRAW
-		#ifdef HAVE_X
-		  deviceList.push_back( new DeviceX());
-		#endif
-		#ifdef _WIN32
-		  deviceList.push_back( new DeviceWIN());
-		#endif
-	#else
-		#ifdef HAVE_X
-			deviceList.push_back( new DeviceWX("X"));
-		#endif
-		#ifdef _WIN32
-			deviceList.push_back( new DeviceWX("WIN"));
-		#endif
-	#endif  
+    DStructGDL* version = SysVar::Version();
+    static unsigned osTag = version->Desc()->TagIndex( "OS");
+    DString os = (*static_cast<DStringGDL*>( version->GetTag( osTag, 0)))[0];
+    if( os != "darwin")  GDLWidget::Init();
+#endif
+ //*/
+  // if GDL_USE_WX (or switch --use-wx) , and has wxWidgets, the wxWidgets device becomes 'X' or 'WIN' depending on machine,
+  // no other device is defined.
+  if (useWxWidgetsForGraphics) {
+#ifdef HAVE_LIBWXWIDGETS
+#ifdef HAVE_X
+    deviceList.push_back( new DeviceWX("X"));
+#else
+#ifdef _WIN32
+    deviceList.push_back( new DeviceWX("WIN"));
+#endif
+#endif  
 #else
 	#ifdef HAVE_X
 		deviceList.push_back( new DeviceX());
@@ -239,8 +231,7 @@ void GraphicsDevice::Init()
 #ifdef _WIN32
     deviceList.push_back( new DeviceWIN());
 #endif
-  }				   // (useWX == "YES" )
-
+  }
   // we try to set X, WIN or WX as default 
   // (and NULL if X11 system (Linux, OSX, Sun) but without X11 at compilation)
 #if defined(HAVE_X) // Check X11 first
@@ -250,11 +241,11 @@ void GraphicsDevice::Init()
 #elif defined (HAVE_LIBWXWIDGETS) // Finally check WX
       if (!SetDevice("MAC"))
 #else
-	if( !SetDevice( "NULL")) 
+    if( !SetDevice( "NULL")) 
 #  endif
 #  if !defined (HAVE_X) && !defined (HAVE_LIBWXWIDGETS) && !defined (_WIN32)
-	  {
-	  }
+      {
+      }
 #  else
   {
     cerr << "Error initializing graphics." << endl;
@@ -304,7 +295,7 @@ void GraphicsDevice::Init()
 
 void GraphicsDevice::DestroyDevices()
 {
-	
+    
 #ifdef HAVE_LIBWXWIDGETS
   GDLWidget::UnInit();    // un-initialize widget system
 #endif
@@ -545,10 +536,10 @@ bool GraphicsMultiDevice::WShow(int ix, bool show, int iconic) {
   if (ix >= wLSize || ix < 0 || winList[ix] == NULL) return false;
 
   if (iconic!=-1) { //iconic asked. do nothing else.
-		if (iconic==1) IconicWin(ix); else DeIconicWin(ix);
-	} else {
+    if (iconic==1) IconicWin(ix); else DeIconicWin(ix);
+    } else {
   
-		if (show) RaiseWin(ix);  else LowerWin(ix);
+  if (show) RaiseWin(ix);  else LowerWin(ix);
   }
   UnsetFocus();
 

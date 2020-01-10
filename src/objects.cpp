@@ -77,6 +77,8 @@ namespace structDesc {
   DStructDesc* GDL_CONTAINER = NULL;
   DStructDesc* GDL_CONTAINER_NODE = NULL;
   DStructDesc* GDL_HASHTABLEENTRY = NULL;
+  DStructDesc* IDLFFSHAPE = NULL;
+  DStructDesc* IDLFFXMLSAX = NULL;
 }
 
 // for OpenMP
@@ -88,6 +90,12 @@ const DLong64 CpuTPOOL_MAX_ELTS_max = numeric_limits<DLong64>::max();
 // instantiate own AST factory
 //_DNodeFactory DNodeFactory;
 antlr::ASTFactory DNodeFactory("DNode",DNode::factory);
+
+//do we use WxWidgets for graphics?
+volatile bool useWxWidgetsForGraphics;
+
+//do we favor SIMD-accelerated random number generation?
+volatile bool useDSFMTAcceleration;
 
 void ResetObjects()
 {
@@ -139,6 +147,7 @@ void InitStructs()
   SpDInt   aColor( dimension(3));
   SpDLong   aLongArr8( dimension(8));
   SpDLong64   aLong64Arr8( dimension(8));
+  SpDDouble   aDoubleArr8( dimension(8));
   SpDPtr    aPtrRef;
   SpDObj    aObjRef;
   SpDUInt   auInt;
@@ -230,6 +239,65 @@ void InitStructs()
   // insert into structList
   structList.push_back(gdlHashTE);
   structDesc::GDL_HASHTABLEENTRY = gdlHashTE;
+  
+#ifdef USE_SHAPELIB  
+  //for IDLffShape
+  DStructDesc* gdlffShape = new DStructDesc( "IDLFFSHAPE");
+  gdlffShape->AddTag("IDLFFSHAPE_TOP", &aLong64);
+  gdlffShape->AddTag("IDLFFSHAPEVERSION", &aInt);
+  gdlffShape->AddTag("FILENAME", &aString);
+  gdlffShape->AddTag("ISOPEN", &aInt);
+  gdlffShape->AddTag("SHPTYPE", &aInt);
+  gdlffShape->AddTag("PATTRIBUTE", &aPtrRef);
+  gdlffShape->AddTag("SHAPEHANDLE", &aLong64);
+  gdlffShape->AddTag("DBFHANDLE", &aLong64);
+  gdlffShape->AddTag("IDLFFSHAPE_BOTTOM", &aLong64);
+  // insert into structList
+  structList.push_back(gdlffShape);
+  structDesc::IDLFFSHAPE = gdlffShape;
+ 
+  
+  DStructDesc* gdlffShape_entity = new DStructDesc( "IDL_SHAPE_ENTITY");
+  gdlffShape_entity->AddTag("SHAPE_TYPE", &aLong);
+  gdlffShape_entity->AddTag("ISHAPE", &aLong);
+  gdlffShape_entity->AddTag("BOUNDS", &aDoubleArr8);
+  gdlffShape_entity->AddTag("N_VERTICES", &aLong);
+  gdlffShape_entity->AddTag("VERTICES", &aPtrRef);
+  gdlffShape_entity->AddTag("MEASURE", &aPtrRef);
+  gdlffShape_entity->AddTag("N_PARTS", &aLong);
+  gdlffShape_entity->AddTag("PARTS", &aPtrRef);
+  gdlffShape_entity->AddTag("PART_TYPES", &aPtrRef);
+  gdlffShape_entity->AddTag("ATTRIBUTES", &aPtrRef);
+  // insert into structList
+  structList.push_back(gdlffShape_entity);
+  
+  DStructDesc* gdlffShape_attribute = new DStructDesc( "IDL_SHAPE_ATTRIBUTE");
+  gdlffShape_attribute->AddTag("NAME", &aString);
+  gdlffShape_attribute->AddTag("TYPE", &aLong);
+  gdlffShape_attribute->AddTag("WIDTH", &aLong);
+  gdlffShape_attribute->AddTag("PRECISION", &aLong);
+  // insert into structList
+  structList.push_back(gdlffShape_attribute);
+#endif
+  
+#ifdef USE_EXPAT
+  
+  //for IDLffXMLSAX
+  DStructDesc* gdlffXmlSax = new DStructDesc( "IDLFFXMLSAX");
+  gdlffXmlSax->AddTag("IDLFFXMLSAX_TOP", &aLong64);
+  gdlffXmlSax->AddTag("IDLFFXMLSAXVERSION", &aInt);
+  gdlffXmlSax->AddTag("VALIDATION_MODE", &aInt);
+  gdlffXmlSax->AddTag("HALT_PROCESSING", &aInt);
+  gdlffXmlSax->AddTag("_XML_PARSER", &aLong64);
+  gdlffXmlSax->AddTag("_XML_LOCATOR", &aLong64);
+  gdlffXmlSax->AddTag("IDLFFXMLSAX_BOTTOM", &aLong64);
+//  gdlffXmlSax->AddParent(gdl_object);
+  // insert into structList
+  structList.push_back(gdlffXmlSax);
+  structDesc::IDLFFXMLSAX = gdlffXmlSax;
+#endif
+  
+  
   
   // OBJECTS END =======================================================
    
@@ -927,6 +995,7 @@ int get_suggested_omp_num_threads() {
   //set number of threads for appropriate OS
   int avload = 0;
   int nbofproc = omp_get_num_procs();
+  default_num_threads = nbofproc; //must be the default!!! 
   FILE *iff;
     
 #if defined(__APPLE__) || defined(__MACH__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__) || defined(__bsdi__) || defined(__DragonFly__)
@@ -1008,10 +1077,11 @@ int get_suggested_omp_num_threads() {
     {
       return default_num_threads;
     }
-  //   cout<<buffer[0]<<" "<<buffer[1]<<endl;
-  avload=(buffer[0]-'0')+((buffer[2]-'0')>5?1:0);
-
-  suggested_num_threads=nbofproc-avload;
+  float la;
+  if (sscanf(buffer, "%f", &la)!=1) return default_num_threads;
+//  cout<<la<<endl;
+  suggested_num_threads=max(1,nbofproc-int(la));
+//  cout<<suggested_num_threads<<endl;
 #endif  
   return suggested_num_threads;
 }

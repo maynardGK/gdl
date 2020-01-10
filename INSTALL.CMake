@@ -1,4 +1,5 @@
-Be sure that you have at least CMake 2.6 (cmake --version)
+Be sure that you have at least CMake 3.0 (cmake --version)
+(with CMake <=3.2, an additional flag is needed, see below)
 
 Create a new directory where the objects and executables 
 will be built, e.g.
@@ -6,6 +7,9 @@ $ mkdir build; cd !$
 
 Then run cmake pointing it to the root directory of gdl:
 $ cmake ..
+
+If using CMake <=3.2, you will be prompted to include
+"-std=c++11" in the -DCMAKE_CXX_FLAGS argument value
 
 You can optionally specify a custom install prefix, e.g.:
 $ cmake .. -DCMAKE_INSTALL_PREFIX=$PWD/../install
@@ -23,7 +27,7 @@ features can be enabled or disabled using CMake options.
 
 Most of the optional features have a flag that controls
 enabling/disabling the feature (e.g. EIGEN3, FFTW, HDF5, 
-MAGICK, PSLIB, GRAPHICSMAGICK, GRIB, GSHHS, HDF, ...) 
+MAGICK, PSLIB, GRAPHICSMAGICK, GRIB, HDF, ...) 
 and a flag that allows to specify a custom location of a
 given package (e.g. EIGEN3DIR, FFTWDIR, HDF5DIR, ...). 
 Both the on/off and the path-spec options are passed 
@@ -34,8 +38,6 @@ $ cmake .. -DFFTWDIR=/opt/local/   # alternative FFTW path
 Other options include:
 - PYTHONVERSION to chose a particular Python version if 
   multiple are installed on the system,
-- OLDPLPLOT to switch off features requiring newer plplot
-  versions,
 - GDL_DATA_DIR (default: /share/gnudatalanguage) to specify
   a custom installation location for GDL files 
   (a subdirectory of the main installation prefix)
@@ -68,16 +70,17 @@ of targets and `make edit_cache' to edit cache results
 examples:
 mkdir gdl-clang
 cd gdl-clang
-cmake -DCMAKE_CXX_COMPILER=clang++  -DCMAKE_BUILD_TYPE=Release -DPYTHON=NO -DCMAKE_CXX_FLAGS_RELEASE=" -Wno-return-type -Wno-switch -Wno-format -O3 " -DPLPLOTDIR="somewhere"  -DLIBPROJ4=YES -DGSHHS=YES -DGSHHSDIR="/where/is/gshhs" -DHDF=YES -DUDUNITS=YES  -DUDUNITSDIR=/usr/include/udunits2 -DGLPK=OFF  ../gdl-lastversionfromcvs
+cmake -DCMAKE_CXX_COMPILER=clang++  -DCMAKE_BUILD_TYPE=Release -DPYTHON=NO -DCMAKE_CXX_FLAGS_RELEASE=" -Wno-return-type -Wno-switch -Wno-format -O3 " -DPLPLOTDIR="somewhere"  -DLIBPROJ4=YES -DHDF=YES -DUDUNITS=YES  -DUDUNITSDIR=/usr/include/udunits2 -DGLPK=OFF  ../gdl-lastversionfromcvs
 make -j 4
 sudo make install
 
 or
 mkdir gdl-gcc
 cd gdl-gcc
-cmake -DCMAKE_BUILD_TYPE=Release -DPYTHON=YES -DCMAKE_CXX_FLAGS_RELEASE=" -Wno-return-type -Wno-switch -Wno-format " -DPLPLOTDIR="somewhere"  -DLIBPROJ4=YES -DGSHHS=YES -DGSHHSDIR="/where/is/gshhs" -DHDF=YES -DUDUNITS=YES  -DUDUNITSDIR=/usr/include/udunits2 -DGLPK=OFF ../gdl-lastversionfromcvs
+cmake -DCMAKE_BUILD_TYPE=Release -DPYTHON=YES -DCMAKE_CXX_FLAGS_RELEASE=" -Wno-return-type -Wno-switch -Wno-format " -DPLPLOTDIR="somewhere"  -DLIBPROJ4=YES -DHDF=YES -DUDUNITS=YES  -DUDUNITSDIR=/usr/include/udunits2 -DGLPK=OFF ../gdl-lastversionfromcvs
 make -j 4
 sudo make install
 
-For a special compilation with all the options for fast code, including targeting the machine's processor type, use:
--DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS_RELEASE="-O3 -fno-math-errno -funsafe-math-optimizations -fno-rounding-math -fno-signaling-nans -fcx-limited-range -march=native -DNDEBUG"
+For a special compilation with all the options for fast code, including targeting the machine's processor type, use for example:
+-DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS_RELEASE="-O3 -fno-math-errno -fno-signaling-nans -msse2 -march=native -DNDEBUG"
+more aggressive optimisations may invalidate tests about NaNs for example.

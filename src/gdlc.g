@@ -939,7 +939,7 @@ int flexible_array_def_count=1;
             }
         | (COLON! eee:expr {flexible_array_def_count++;})+ RSQUARE!
           {
-            if (flexible_array_def_count!=3) throw GDLException( "Illegal array creation syntax.");
+            if (flexible_array_def_count>3 || flexible_array_def_count<2) throw GDLException( "Illegal array creation syntax.");
             #array_def = #([ARRAYDEF_GENERALIZED_INDGEN, "array_def_generalized_indgen"], #array_def);
           } 
       )
@@ -1967,12 +1967,8 @@ tokens {
 {
   // Stuff for include files (@filename)
   private:
-#if (__cplusplus >= 201103L)
     std::unique_ptr<std::ifstream>    inputFile; // stores ifsteam* and deletes 
-#else
-    std::auto_ptr<std::ifstream>    inputFile; // stores ifsteam* and deletes 
-#endif
-                                     // it when it is deleted itself 
+                                     // it when it is deleted itself
     antlr::TokenStreamSelector*     selector; 
     GDLLexer*                       mainLexerPtr;
     GDLParser*                      parserPtr;

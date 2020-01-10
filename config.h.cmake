@@ -10,7 +10,6 @@
 #cmakedefine HAVE_X 1
 #cmakedefine HAVE_64BIT_OS 1
 #cmakedefine HAVE_DLFCN_H 1
-#cmakedefine HAVE_GSHHS_H 1
 #cmakedefine HAVE_INTTYPES_H 1
 #cmakedefine HAVE_LIBCURSES 1
 #cmakedefine HAVE_LIBGSL 1
@@ -29,8 +28,6 @@
 #cmakedefine HAVE_MALLOC_ZONE_STATISTICS 1
 #cmakedefine HAVE_MEMORY_H 1
 #cmakedefine HAVE_NEXTTOWARD 1
-#cmakedefine HAVE_OLDPLPLOT 1
-#cmakedefine HAVE_PLPLOT_SLABELFUNC 1
 #cmakedefine HAVE_PLPLOT_WIDTH 1
 #cmakedefine PLPLOT_PRIVATE_NOT_HIDDEN 1
 #cmakedefine PLPLOT_HAS_PLCALLBACK
@@ -60,6 +57,7 @@
 #ifndef HAVE_EXT_STDIO_FILEBUF_H
 #cmakedefine HAVE_EXT_STDIO_FILEBUF_H 1
 #endif
+#cmakedefine IS_BIGENDIAN
 #cmakedefine OLD_DARWIN
 #cmakedefine PYTHON_MODULE 1
 #cmakedefine RL_GET_SCREEN_SIZE 1
@@ -67,7 +65,8 @@
 #cmakedefine USE_FFTW 1
 #cmakedefine USE_GRIB 1
 #cmakedefine USE_GLPK 1
-#cmakedefine USE_GSHHS 1
+#cmakedefine USE_SHAPELIB 1
+#cmakedefine USE_EXPAT 1
 #cmakedefine USE_HDF 1
 #cmakedefine USE_HDF5 1
 #cmakedefine USE_LIBPROJ4 1
@@ -78,9 +77,12 @@
 #cmakedefine USE_NETCDF4 1
 #cmakedefine USE_OPENMP 1
 #cmakedefine USE_PYTHON 1
+#cmakedefine USE_TIFF 1
+#cmakedefine USE_GEOTIFF 1
 #cmakedefine USE_UDUNITS 1
 #cmakedefine USE_PSLIB 1
 #cmakedefine USE_EIGEN 1
 #cmakedefine USE_PNGLIB 1
 #cmakedefine USE_X 1
+#cmakedefine USE_WINGDI_NOT_WINGCC 1
 #endif
