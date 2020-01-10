@@ -58,6 +58,7 @@
 #cmakedefine HAVE_EXT_STDIO_FILEBUF_H 1
 #endif
 #cmakedefine IS_BIGENDIAN
+#cmakedefine NO_WIDGET_DRAW 1
 #cmakedefine OLD_DARWIN
 #cmakedefine PYTHON_MODULE 1
 #cmakedefine RL_GET_SCREEN_SIZE 1
